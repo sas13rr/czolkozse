@@ -2,6 +2,9 @@
 <html lang="pl" class="dark">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CZÓŁKO.IO - Imprezowa Gra Ekipy</title>
     <!-- Tailwind CSS -->
@@ -1004,9 +1007,25 @@
         // --- AWATARY EMOJI DO WYBORU (Oprócz wgrywania własnego zdjęcia) ---
         const AVATARS = ['😎', '🤠', '👽', '🐸', '🦊', '🐱', '🐶', '🐵', '👻', '🤖', '🦄', '🦖'];
 
+        // --- WERSJA STRONY + STAŁE ID (sprawdzane przy starcie, żeby nikt nie siedział na starej wersji z cache) ---
+        const BUILD_ID = 'v5-2026-11-09';
+        const TAB_ID = 't_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+        function getStableGuestId() {
+            try {
+                let id = sessionStorage.getItem('czolko_guest_id');
+                if (!id) {
+                    id = 'p_' + Math.random().toString(36).substring(2, 10);
+                    sessionStorage.setItem('czolko_guest_id', id);
+                }
+                return id;
+            } catch (e) {
+                return 'p_' + Math.random().toString(36).substring(2, 10);
+            }
+        }
+
         // --- PROFIL GRACZA ---
         let myPlayer = {
-            id: 'p_' + Math.random().toString(36).substring(2, 9),
+            id: getStableGuestId(),
             nick: '',
             emailOrLogin: '',
             avatar: '😎',
@@ -1015,7 +1034,10 @@
             guessedCount: 0,
             passedCount: 0,
             isPlayingNow: false,
-            lastSeen: Date.now()
+            lastSeen: Date.now(),
+            rev: 0,
+            ts: 0,
+            joinedAt: 0
         };
 
         let accountType = 'guest'; // 'guest' | 'register' | 'login'
@@ -1050,7 +1072,7 @@
 
         // --- SPRAWDZENIE CZY JESTEM HOSTEM / ADMINEM POKOJU ---
         function isRoomHost() {
-            return !roomHostId || roomHostId === myPlayer.id;
+            return !!roomHostId && roomHostId === myPlayer.id;
         }
 
         // --- POMOCNICZE ESCAPOWANIE HTML ---
@@ -1336,6 +1358,7 @@
                     } catch (e) {}
                 }
             } else {
+                myPlayer.id = getStableGuestId();
                 myPlayer.emailOrLogin = emailVal || nickInput.toLowerCase();
             }
 
@@ -1406,8 +1429,42 @@
             }
         };
 
-        // --- WEJŚCIE DO POKOJU W KROKU 2 ---
+        // --- WEJŚCIE DO POKOJU W KROKU 2 (v5: kody pokoi działają jak w Among Us) ---
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function setEnterButtonBusy(busy) {
+            const label = document.getElementById('step2-submit-label');
+            if (!label) return;
+            if (busy) label.textContent = 'ŁĄCZENIE…';
+            else label.textContent = authMode === 'create' ? 'STWÓRZ POKÓJ I GRAJ!' : 'DOŁĄCZ DO POKOJU!';
+        }
+
+        // Pełne wyczyszczenie stanu pokoju (nowy pokój = zupełnie czysty stan, nic ze starego!)
+        function resetRoomState() {
+            wordsPool = [];
+            usedWordIds = new Set();
+            roomPlayers = {};
+            roomPresence = {};
+            roomGuessedFeed = [];
+            roomHostId = '';
+            roomRules = { blockOwnWords: true, avoidRepeats: true };
+            roomSecurity = { requireWhitelist: false, allowedLogins: [] };
+            window._lastHostUpdatedAt = 0;
+            window._lastClearedAt = 0;
+            window._lastResetUsedAt = 0;
+            window._lastHistoryClearedAt = 0;
+            myPlayer.score = 0;
+            myPlayer.guessedCount = 0;
+            myPlayer.passedCount = 0;
+            myPlayer.rev = 0;
+            myPlayer.ts = 0;
+            myPlayer.isPlayingNow = false;
+            lastVisibleSig = '';
+        }
+
         window.enterPartyRoom = async function() {
+            if (joiningRoom) return;
+
             if (!myPlayer.nick) {
                 const fallbackNick = document.getElementById('player-nick-input').value.trim();
                 if (!fallbackNick) {
@@ -1418,7 +1475,8 @@
                 myPlayer.nick = fallbackNick;
             }
 
-            let rawCode = authMode === 'create'
+            const mode = authMode;
+            let rawCode = mode === 'create'
                 ? document.getElementById('create-room-code-input').value.trim()
                 : document.getElementById('join-room-code-input').value.trim();
 
@@ -1429,38 +1487,135 @@
                 return;
             }
 
-            myPlayer.lastSeen = Date.now();
-
-            if (currentRoomCode !== rawCode && authMode === 'create') {
-                wordsPool = [];
-                usedWordIds.clear();
-                roomPlayers = {};
-                roomGuessedFeed = [];
-                roomHostId = myPlayer.id;
-            } else if (authMode === 'create') {
-                roomHostId = myPlayer.id;
+            // Ten sam użytkownik nie może wejść drugi raz do tego samego pokoju
+            if (roomReady && currentRoomCode === rawCode) {
+                document.getElementById('screen-lobby-auth').classList.add('hidden');
+                showToast(`Już jesteś w pokoju #${rawCode}.`, 'info');
+                return;
             }
 
-            currentRoomCode = rawCode;
-            myPlayer.isHost = (roomHostId === myPlayer.id);
-            roomPlayers[myPlayer.id] = { ...myPlayer };
+            // Wchodzisz do INNEGO pokoju -> najpierw porządnie wychodzisz ze starego
+            if (currentRoomCode) leaveRoom(false, true);
 
-            renderHeaderAvatar();
-            document.getElementById('header-player-nick').textContent = myPlayer.nick;
-            document.getElementById('header-room-code').textContent = currentRoomCode;
-            document.getElementById('invite-code-inline').textContent = currentRoomCode;
+            joiningRoom = true;
+            const token = ++joinToken;
+            setEnterButtonBusy(true);
 
-            document.getElementById('screen-lobby-auth').classList.add('hidden');
+            const cancelled = () => token !== joinToken;
+            const abortJoin = (msg, type) => {
+                leaveRoom(false, true);
+                setEnterButtonBusy(false);
+                if (msg) showToast(msg, type || 'warning');
+            };
 
-            connectLiveRoom(currentRoomCode);
-            updateUI();
-            showToast(`Wbiłeś do pokoju #${currentRoomCode} jako ${myPlayer.nick}!`, 'success');
+            try {
+                resetRoomState();
+                myPlayer.lastSeen = Date.now();
+                myPlayer.joinedAt = Date.now();
+                roomReady = false;
+                currentRoomCode = rawCode;
+                currentMqttTopic = `${TOPIC_ROOT}/room_${rawCode}`;
+                connectCloudRoom(rawCode);
+
+                const online = await waitForMqtt(5000);
+                if (cancelled()) return;
+
+                if (online) {
+                    await subscribeTopic(currentMqttTopic);
+                    if (cancelled()) return;
+                    sendHello(true);
+                    for (let waited = 0; waited < 2200; waited += 100) {
+                        await sleep(100);
+                        if (cancelled()) return;
+                        const found = getVisiblePlayers().filter(p => p.id !== myPlayer.id);
+                        if (found.length > 0 && (roomHostId || waited >= 900)) break;
+                    }
+                }
+
+                const others = getVisiblePlayers().filter(p => p.id !== myPlayer.id);
+
+                if (online && mode === 'create' && others.length > 0) {
+                    rollRandomRoomCode();
+                    abortJoin(`Kod ${rawCode} jest już zajęty – ktoś w nim gra. Wylosowałem nowy kod, kliknij jeszcze raz!`, 'warning');
+                    return;
+                }
+                if (mode === 'join' && !online) {
+                    abortJoin('Brak połączenia z serwerem live – nie mogę sprawdzić pokoju. Spróbuj za chwilę.', 'error');
+                    return;
+                }
+                if (mode === 'join' && others.length === 0) {
+                    abortJoin(`Nie ma pokoju o kodzie ${rawCode} (nikt w nim nie jest online). Sprawdź kod albo stwórz nowy pokój.`, 'error');
+                    return;
+                }
+                const myNickLow = (myPlayer.nick || '').trim().toLowerCase();
+                if (others.some(p => (p.nick || '').trim().toLowerCase() === myNickLow)) {
+                    abortJoin(`W pokoju ${rawCode} jest już gracz o nicku „${myPlayer.nick}”. Cofnij się i zmień nick (albo odczekaj chwilę, jeśli to Twoja stara karta).`, 'warning');
+                    return;
+                }
+
+                // --- SUKCES ---
+                roomReady = true;
+                if (others.length === 0) {
+                    roomHostId = myPlayer.id;
+                    window._lastHostUpdatedAt = Date.now();
+                }
+
+                renderHeaderAvatar();
+                document.getElementById('header-player-nick').textContent = myPlayer.nick;
+                document.getElementById('header-room-code').textContent = currentRoomCode;
+                document.getElementById('invite-code-inline').textContent = currentRoomCode;
+                document.getElementById('screen-lobby-auth').classList.add('hidden');
+
+                startRoomTimers();
+                sendHello(false);
+                broadcastRoomState();
+                updateUI();
+                showToast(
+                    mode === 'create' && others.length === 0
+                        ? `Stworzyłeś pokój #${currentRoomCode} – podaj ten kod znajomym!`
+                        : `Dołączyłeś do pokoju #${currentRoomCode} jako ${myPlayer.nick}!`,
+                    'success'
+                );
+            } finally {
+                if (!cancelled()) {
+                    joiningRoom = false;
+                    setEnterButtonBusy(false);
+                }
+            }
         };
 
-        window.leaveRoom = function() {
-            document.getElementById('screen-lobby-auth').classList.remove('hidden');
-            document.getElementById('auth-step-1').classList.add('hidden');
-            document.getElementById('auth-step-2').classList.remove('hidden');
+        window.leaveRoom = function(skipNotify, keepScreen) {
+            joinToken++; // anuluje trwające dołączanie
+            if (currentRoomCode && skipNotify !== true) publishRoom({ t: 'LEAVE' });
+
+            if (roomTickTimer) { clearInterval(roomTickTimer); roomTickTimer = null; }
+            if (mqttClient && currentMqttTopic) {
+                try { mqttClient.unsubscribe(currentMqttTopic); } catch (e) {}
+            }
+            if (roomUnsubscribe) { try { roomUnsubscribe(); } catch (e) {} roomUnsubscribe = null; }
+
+            if (preCountdownInterval) clearInterval(preCountdownInterval);
+            if (activeGameInterval) clearInterval(activeGameInterval);
+            ['overlay-countdown', 'overlay-active-game', 'overlay-summary'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+            });
+            currentActiveWord = null;
+
+            currentRoomCode = '';
+            currentMqttTopic = '';
+            roomReady = false;
+            joiningRoom = false;
+            resetRoomState();
+
+            if (keepScreen !== true) {
+                document.getElementById('screen-lobby-auth').classList.remove('hidden');
+                document.getElementById('auth-step-1').classList.add('hidden');
+                document.getElementById('auth-step-2').classList.remove('hidden');
+                setEnterButtonBusy(false);
+                rollRandomRoomCode();
+            }
+            updateUI();
         };
 
         window.copyRoomInvite = function() {
@@ -1509,15 +1664,33 @@
         };
 
         // =========================================================================
-        // PODWÓJNA SYNCHRONIZACJA LIVE (MQTT WebSockets + Opcjonalny Firebase)
+        // SYNCHRONIZACJA LIVE v5 (MQTT WebSockets + opcjonalny Firebase)
+        // Obecność graczy (heartbeat), unikalne kody pokoi, licznik LIVE
         // =========================================================================
+        const TOPIC_ROOT = 'czolko_io_pl_v5';          // nowy prefiks = stare wersje strony nie mieszają się z nowymi
+        const GLOBAL_TOPIC = TOPIC_ROOT + '/global';
+        const PRESENCE_TTL = 25000;                     // gracz bez sygnału > 25 s znika z listy
+        const GLOBAL_TTL = 20000;
+        const HEARTBEAT_MS = 4000;
+
         let mqttClient = null;
+        let mqttReady = false;
+        let mqttReadyWaiters = [];
         let currentMqttTopic = '';
         let cloudDb = null;
         let cloudUser = null;
         let cloudFns = null;
         let roomUnsubscribe = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'czolko-party-io';
+
+        let roomPresence = {};     // { playerId: { seen, tabId } }  - kto jest TERAZ w pokoju
+        let globalPresence = {};   // { tabId: { key, seen } }       - kto jest TERAZ na stronie
+        let roomReady = false;     // true dopiero gdy dołączanie zostało zaakceptowane
+        let joiningRoom = false;
+        let joinToken = 0;
+        let roomTickTimer = null;
+        let lastFullStateAt = 0;
+        let lastVisibleSig = '';
 
         async function initCloudEngine() {
             try {
@@ -1542,89 +1715,331 @@
             } catch (e) {}
         }
 
-        function connectLiveRoom(roomCode) {
+        function connectCloudRoom(roomCode) {
             if (cloudDb && cloudUser && cloudFns) {
-                if (roomUnsubscribe) roomUnsubscribe();
+                if (roomUnsubscribe) { try { roomUnsubscribe(); } catch (e) {} }
                 const docId = `room_${roomCode}`;
                 const roomRef = cloudFns.doc(cloudDb, 'artifacts', appId, 'public', 'data', 'czolko_rooms', docId);
-
                 roomUnsubscribe = cloudFns.onSnapshot(roomRef, (snapshot) => {
                     if (snapshot.exists()) {
-                        mergeIncomingRoomState(snapshot.data());
-                    } else {
+                        mergeIncomingRoomState(snapshot.data(), null, null, true);
+                    } else if (roomReady) {
                         broadcastRoomState();
                     }
                 }, () => {});
             }
+        }
 
+        // --- JEDEN KLIENT MQTT NA CAŁĄ STRONĘ (globalny licznik + aktualny pokój) ---
+        function ensureMqtt() {
+            if (mqttClient || typeof mqtt === 'undefined') return;
             try {
-                if (typeof mqtt !== 'undefined') {
-                    if (mqttClient) {
-                        try { mqttClient.end(true); } catch (e) {}
+                mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+                    clientId: 'czolko_' + TAB_ID,
+                    clean: true,
+                    connectTimeout: 5000,
+                    reconnectPeriod: 2000
+                });
+
+                mqttClient.on('connect', () => {
+                    mqttReady = true;
+                    setSyncBadge(true);
+                    mqttClient.subscribe(GLOBAL_TOPIC, { qos: 0 });
+                    publishGlobal({ t: 'PING' });
+                    sendGlobalHeartbeat();
+                    if (currentMqttTopic) {
+                        mqttClient.subscribe(currentMqttTopic, { qos: 0 }, () => sendHello(!roomReady));
                     }
-                    const topic = `czolko_io_pl_v4/room_${roomCode}`;
-                    currentMqttTopic = topic;
+                    mqttReadyWaiters.splice(0).forEach(fn => fn(true));
+                });
+                mqttClient.on('close', () => { mqttReady = false; setSyncBadge(false); });
+                mqttClient.on('offline', () => { mqttReady = false; setSyncBadge(false); });
+                mqttClient.on('error', () => setSyncBadge(false));
 
-                    mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
-                        clientId: 'czolko_' + myPlayer.id + '_' + Math.random().toString(16).slice(2, 6),
-                        clean: true,
-                        connectTimeout: 4000,
-                        reconnectPeriod: 2000,
-                    });
-
-                    mqttClient.on('connect', () => {
-                        setSyncBadge(true);
-                        mqttClient.subscribe(topic, { qos: 0 }, () => {
-                            publishMqttPacket({ type: 'SYNC_REQUEST', senderId: myPlayer.id });
-                            broadcastRoomState();
-                        });
-                    });
-
-                    mqttClient.on('message', (t, payload) => {
-                        try {
-                            const msg = JSON.parse(payload.toString());
-                            if (msg.type === 'SYNC_REQUEST' && msg.senderId !== myPlayer.id) {
-                                broadcastRoomState();
-                            } else if (msg.type === 'ROOM_STATE') {
-                                mergeIncomingRoomState(msg.state);
-                            }
-                        } catch (err) {}
-                    });
-
-                    mqttClient.on('error', () => setSyncBadge(false));
-                }
+                mqttClient.on('message', (topic, payload) => {
+                    let msg;
+                    try { msg = JSON.parse(payload.toString()); } catch (err) { return; }
+                    if (topic === GLOBAL_TOPIC) handleGlobalMessage(msg);
+                    else if (currentMqttTopic && topic === currentMqttTopic) handleRoomMessage(msg);
+                });
             } catch (e) {}
+        }
+
+        function waitForMqtt(ms) {
+            return new Promise(res => {
+                if (mqttReady) return res(true);
+                ensureMqtt();
+                if (!mqttClient) return res(false);
+                let done = false;
+                const fn = v => { if (!done) { done = true; res(v); } };
+                mqttReadyWaiters.push(fn);
+                setTimeout(() => fn(mqttReady), ms);
+            });
+        }
+
+        function subscribeTopic(topic) {
+            return new Promise(res => {
+                if (!mqttClient) return res(false);
+                let done = false;
+                const fin = v => { if (!done) { done = true; res(v); } };
+                try { mqttClient.subscribe(topic, { qos: 0 }, err => fin(!err)); } catch (e) { fin(false); }
+                setTimeout(() => fin(false), 3000);
+            });
         }
 
         function setSyncBadge(online) {
             const dot = document.getElementById('sync-dot');
             if (!dot) return;
-            if (online) {
-                dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+            dot.className = online
+                ? 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse'
+                : 'w-2 h-2 rounded-full bg-amber-400';
+        }
+
+        // --- GLOBALNY LICZNIK "LIVE ONLINE" (działa też w menu przed wejściem do pokoju) ---
+        function globalKey() {
+            return (myPlayer.id || '').startsWith('acc_') ? myPlayer.id : TAB_ID;
+        }
+
+        function publishGlobal(packet) {
+            if (!mqttClient || !mqttReady) return;
+            try {
+                mqttClient.publish(GLOBAL_TOPIC, JSON.stringify({ ...packet, tabId: TAB_ID, key: globalKey() }));
+            } catch (e) {}
+        }
+
+        function sendGlobalHeartbeat() { publishGlobal({ t: 'HB' }); }
+
+        function handleGlobalMessage(msg) {
+            if (!msg || !msg.tabId) return;
+            if (msg.t === 'BYE') {
+                delete globalPresence[msg.tabId];
             } else {
-                dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+                globalPresence[msg.tabId] = { key: msg.key || msg.tabId, seen: Date.now() };
+                if (msg.t === 'PING' && msg.tabId !== TAB_ID) sendGlobalHeartbeat();
+            }
+            renderGlobalCounter();
+        }
+
+        function getGlobalOnlineCount() {
+            const now = Date.now();
+            const keys = new Set([globalKey()]);
+            Object.entries(globalPresence).forEach(([tab, e]) => {
+                if (tab !== TAB_ID && now - e.seen < GLOBAL_TTL) keys.add(e.key);
+            });
+            return keys.size;
+        }
+
+        function renderGlobalCounter() {
+            const el = document.getElementById('global-live-counter');
+            if (el) el.textContent = getGlobalOnlineCount();
+        }
+
+        function initGlobalPresence() {
+            ensureMqtt();
+            const el = document.getElementById('global-live-counter');
+            if (el && el.parentElement && !document.getElementById('build-badge')) {
+                el.parentElement.insertAdjacentHTML('beforeend', `<span id="build-badge" class="text-[9px] text-slate-500 ml-1.5">${BUILD_ID.split('-')[0]}</span>`);
+            }
+            renderGlobalCounter();
+            setInterval(() => { sendGlobalHeartbeat(); renderGlobalCounter(); }, 5000);
+        }
+
+        // --- WIADOMOŚCI POKOJU ---
+        function publishRoom(packet) {
+            if (!mqttClient || !mqttReady || !currentMqttTopic) return;
+            try {
+                mqttClient.publish(currentMqttTopic, JSON.stringify({ ...packet, senderId: myPlayer.id, tabId: TAB_ID }));
+            } catch (e) {}
+        }
+
+        // Publiczny rekord gracza (bez maila/loginu!). Zdjęcie dołączamy tylko gdy trzeba.
+        function myPublicRecord(withImg) {
+            const r = {
+                id: myPlayer.id,
+                nick: myPlayer.nick,
+                avatar: myPlayer.avatar,
+                score: myPlayer.score || 0,
+                guessedCount: myPlayer.guessedCount || 0,
+                passedCount: myPlayer.passedCount || 0,
+                isPlayingNow: !!myPlayer.isPlayingNow,
+                rev: myPlayer.rev || 0,
+                ts: myPlayer.ts || 0,
+                joinedAt: myPlayer.joinedAt || 0,
+                lastSeen: Date.now()
+            };
+            if (withImg) r.avatarImg = myPlayer.avatarImg || null;
+            return r;
+        }
+
+        function bumpMyRev() {
+            myPlayer.rev = (myPlayer.rev || 0) + 1;
+            myPlayer.ts = Date.now();
+        }
+
+        function sendHello(probe) {
+            publishRoom({ t: 'HELLO', probe: !!probe, player: myPublicRecord(true) });
+        }
+
+        function sendHeartbeat(withImg) {
+            publishRoom({ t: 'PRESENCE', player: myPublicRecord(!!withImg) });
+        }
+
+        function handleRoomMessage(msg) {
+            if (!msg || !msg.t || msg.tabId === TAB_ID || !currentRoomCode) return;
+            switch (msg.t) {
+                case 'HELLO':
+                    // Ktoś nowy pyta "kto tu jest?" - odpowiadają tylko gracze, którzy już w pokoju są
+                    if (!msg.probe && msg.player) acceptPlayerRecord(msg.player, msg.tabId, true);
+                    if (roomReady) {
+                        sendHeartbeat(true);
+                        if (isRoomHost()) { lastFullStateAt = Date.now(); broadcastRoomState(); }
+                    }
+                    updateUI();
+                    break;
+                case 'PRESENCE':
+                    if (msg.player) acceptPlayerRecord(msg.player, msg.tabId, true);
+                    updateUI();
+                    break;
+                case 'LEAVE':
+                    dropPlayer(msg.senderId, msg.tabId);
+                    updateUI();
+                    break;
+                case 'KICK':
+                    if (msg.targetId === myPlayer.id && roomReady) {
+                        showToast('Host usunął Cię z pokoju.', 'warning');
+                        leaveRoom(true);
+                    }
+                    break;
+                case 'ROOM_STATE':
+                    mergeIncomingRoomState(msg.state, msg.senderId, msg.tabId, false);
+                    break;
             }
         }
 
-        function publishMqttPacket(packet) {
-            if (mqttClient && mqttClient.connected && currentMqttTopic) {
-                try {
-                    mqttClient.publish(currentMqttTopic, JSON.stringify(packet));
-                } catch (e) {}
+        function dropPlayer(id, tabId) {
+            if (!id || id === myPlayer.id) return;
+            const pr = roomPresence[id];
+            if (pr && pr.tabId && tabId && pr.tabId !== tabId) return; // to inna karta tego samego gracza
+            delete roomPresence[id];
+        }
+
+        function adoptOwnRecord(rec) {
+            const newer = (rec.rev || 0) > (myPlayer.rev || 0) ||
+                ((rec.rev || 0) === (myPlayer.rev || 0) && (rec.ts || 0) > (myPlayer.ts || 0));
+            if (newer) {
+                myPlayer.score = rec.score || 0;
+                myPlayer.guessedCount = rec.guessedCount || 0;
+                myPlayer.passedCount = rec.passedCount || 0;
+                myPlayer.rev = rec.rev || 0;
+                myPlayer.ts = rec.ts || 0;
             }
         }
 
-        function mergeIncomingRoomState(incoming) {
-            if (!incoming) return;
+        // direct = rekord przyszedł od samego gracza (a nie przekazany przez kogoś innego)
+        function acceptPlayerRecord(rec, tabId, direct) {
+            if (!rec || !rec.id) return;
+
+            if (rec.id === myPlayer.id) {
+                // TEN SAM użytkownik z innej karty/urządzenia - starsza sesja jest wyrzucana (nie ma duplikatów)
+                if (direct && tabId && tabId !== TAB_ID && roomReady) {
+                    const theirs = rec.joinedAt || 0, mine = myPlayer.joinedAt || 0;
+                    const iAmOlder = theirs > mine || (theirs === mine && tabId > TAB_ID);
+                    if (iAmOlder) {
+                        showToast('To konto weszło do pokoju z innej karty / urządzenia – tutaj zostałeś wylogowany z pokoju.', 'warning');
+                        leaveRoom(true);
+                    }
+                    return;
+                }
+                adoptOwnRecord(rec);
+                return;
+            }
+
+            const cur = roomPlayers[rec.id];
+            const newerScore = !cur || (rec.rev || 0) > (cur.rev || 0) ||
+                ((rec.rev || 0) === (cur.rev || 0) && (rec.ts || 0) >= (cur.ts || 0));
+
+            const merged = { ...(cur || {}), id: rec.id };
+            if (direct || !cur) {
+                merged.nick = rec.nick;
+                merged.avatar = rec.avatar;
+                merged.isPlayingNow = !!rec.isPlayingNow;
+                merged.joinedAt = rec.joinedAt || 0;
+                merged.lastSeen = rec.lastSeen || Date.now();
+            }
+            if (rec.avatarImg !== undefined) merged.avatarImg = rec.avatarImg;
+            if (newerScore) {
+                merged.score = rec.score || 0;
+                merged.guessedCount = rec.guessedCount || 0;
+                merged.passedCount = rec.passedCount || 0;
+                merged.rev = rec.rev || 0;
+                merged.ts = rec.ts || 0;
+            }
+            roomPlayers[rec.id] = merged;
+
+            if (direct) roomPresence[rec.id] = { seen: Date.now(), tabId: tabId || (roomPresence[rec.id] || {}).tabId || null };
+        }
+
+        // Tylko gracze, od których w ostatnich ~25 s przyszedł sygnał życia (+ Ty)
+        function getVisiblePlayers() {
+            const now = Date.now();
+            const list = [];
+            Object.values(roomPlayers).forEach(p => {
+                if (!p || !p.id || p.id === myPlayer.id) return;
+                const pr = roomPresence[p.id];
+                if (pr && now - pr.seen < PRESENCE_TTL) list.push(p);
+            });
+            list.push({ ...myPlayer });
+            return list;
+        }
+
+        function ensureHost() {
+            if (!roomReady) return;
+            const present = getVisiblePlayers();
+            if (roomHostId && present.some(p => p.id === roomHostId)) return;
+            const sorted = present.slice().sort((a, b) =>
+                (a.joinedAt || 0) - (b.joinedAt || 0) || String(a.id).localeCompare(String(b.id)));
+            if (sorted[0] && sorted[0].id === myPlayer.id) {
+                roomHostId = myPlayer.id;
+                window._lastHostUpdatedAt = Date.now();
+                broadcastRoomState();
+                showToast('Poprzedni host wyszedł – Ty jesteś teraz Hostem pokoju!', 'info');
+            }
+        }
+
+        function roomTick() {
+            if (!roomReady) return;
+            sendHeartbeat(false);
+            ensureHost();
+            if (isRoomHost() && Date.now() - lastFullStateAt > 12000) {
+                lastFullStateAt = Date.now();
+                broadcastRoomState();
+            }
+            // przerysuj tylko gdy zmienił się skład obecnych graczy
+            const sig = getVisiblePlayers().map(p => p.id).sort().join('|') + '#' + roomHostId;
+            if (sig !== lastVisibleSig) { lastVisibleSig = sig; updateUI(); }
+        }
+
+        function startRoomTimers() {
+            if (roomTickTimer) clearInterval(roomTickTimer);
+            lastFullStateAt = 0;
+            roomTickTimer = setInterval(roomTick, HEARTBEAT_MS);
+        }
+
+        function mergeIncomingRoomState(incoming, senderId, senderTab, fromCloud) {
+            if (!incoming || !currentRoomCode) return;
 
             if (incoming.hostId) {
-                if (!roomHostId || incoming.hostUpdatedAt > (window._lastHostUpdatedAt || 0)) {
+                const inTs = incoming.hostUpdatedAt || 0;
+                if (!roomHostId || inTs > (window._lastHostUpdatedAt || 0)) {
                     roomHostId = incoming.hostId;
-                    window._lastHostUpdatedAt = incoming.hostUpdatedAt || Date.now();
+                    window._lastHostUpdatedAt = inTs;
                 }
             }
 
-            if (incoming.rules && typeof incoming.rules === 'object') {
+            // Zasady i lista VIP przyjmujemy TYLKO od Hosta (nowy gracz nie może ich nadpisać)
+            const fromHost = !!fromCloud || (senderId && senderId === roomHostId);
+
+            if (fromHost && incoming.rules && typeof incoming.rules === 'object') {
                 roomRules = {
                     blockOwnWords: incoming.rules.blockOwnWords !== false,
                     avoidRepeats: incoming.rules.avoidRepeats !== false
@@ -1635,9 +2050,10 @@
                 if (avoidRepeatsEl) avoidRepeatsEl.checked = roomRules.avoidRepeats;
             }
 
-            if (incoming.security) {
+            if (fromHost && incoming.security) {
                 roomSecurity = incoming.security;
-                if (roomSecurity.requireWhitelist && Array.isArray(roomSecurity.allowedLogins) && roomSecurity.allowedLogins.length > 0) {
+                if (roomHostId !== myPlayer.id && roomSecurity.requireWhitelist &&
+                    Array.isArray(roomSecurity.allowedLogins) && roomSecurity.allowedLogins.length > 0) {
                     const myLogin = (myPlayer.emailOrLogin || '').toLowerCase();
                     const myNick = (myPlayer.nick || '').toLowerCase();
                     if (!roomSecurity.allowedLogins.includes(myLogin) && !roomSecurity.allowedLogins.includes(myNick)) {
@@ -1688,51 +2104,31 @@
             }
 
             if (incoming.players && typeof incoming.players === 'object') {
-                if (incoming.scoresResetAt && incoming.scoresResetAt > (window._lastScoresResetAt || 0)) {
-                    window._lastScoresResetAt = incoming.scoresResetAt;
-                    myPlayer.score = 0;
-                    myPlayer.guessedCount = 0;
-                    myPlayer.passedCount = 0;
-                }
-
-                if (incoming.adminActionAt && incoming.adminActionAt > (window._lastAdminActionAt || 0)) {
-                    window._lastAdminActionAt = incoming.adminActionAt;
-                    roomPlayers = {};
-                    Object.values(incoming.players).forEach(p => {
-                        if (p && p.id) {
-                            roomPlayers[p.id] = p;
-                            if (p.id === myPlayer.id) {
-                                myPlayer.score = p.score || 0;
-                                myPlayer.guessedCount = p.guessedCount || 0;
-                                myPlayer.passedCount = p.passedCount || 0;
-                            }
+                Object.values(incoming.players).forEach(p => {
+                    if (!p || !p.id) return;
+                    if (fromCloud) {
+                        if (p.id !== myPlayer.id && Date.now() - (p.lastSeen || 0) < PRESENCE_TTL) {
+                            roomPresence[p.id] = { seen: Date.now(), tabId: null };
                         }
-                    });
-                } else {
-                    Object.values(incoming.players).forEach(p => {
-                        if (p && p.id) {
-                            if (p.id === myPlayer.id) {
-                                roomPlayers[myPlayer.id] = { ...myPlayer };
-                            } else {
-                                roomPlayers[p.id] = p;
-                            }
-                        }
-                    });
-                }
+                        acceptPlayerRecord(p, null, false);
+                    } else {
+                        const isSender = p.id === senderId;
+                        acceptPlayerRecord(p, isSender ? senderTab : null, isSender);
+                    }
+                });
             }
 
             updateUI();
         }
 
         async function broadcastRoomState(extraMeta = {}) {
-            if (!currentRoomCode) return;
-            if (!roomHostId) roomHostId = myPlayer.id;
+            if (!currentRoomCode || !roomReady) return;
             myPlayer.lastSeen = Date.now();
-            myPlayer.isHost = (roomHostId === myPlayer.id);
-            roomPlayers[myPlayer.id] = { ...myPlayer };
+            roomPlayers[myPlayer.id] = myPublicRecord(true);
 
             const statePayload = {
                 hostId: roomHostId,
+                hostUpdatedAt: window._lastHostUpdatedAt || 0,
                 rules: roomRules,
                 words: wordsPool,
                 usedIds: Array.from(usedWordIds),
@@ -1743,7 +2139,7 @@
                 ...extraMeta
             };
 
-            publishMqttPacket({ type: 'ROOM_STATE', state: statePayload });
+            publishRoom({ t: 'ROOM_STATE', state: statePayload });
 
             if (cloudDb && cloudUser && cloudFns) {
                 try {
@@ -1753,6 +2149,25 @@
                 } catch (e) {}
             }
         }
+
+        // Telefon wraca z tła / zamknięcie karty
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                sendGlobalHeartbeat();
+                if (currentRoomCode && roomReady) sendHello(false);
+            }
+        });
+        window.addEventListener('pagehide', (e) => {
+            if (e && e.persisted) return;
+            if (currentRoomCode) publishRoom({ t: 'LEAVE' });
+            publishGlobal({ t: 'BYE' });
+        });
+        window.addEventListener('pageshow', (e) => {
+            if (e && e.persisted) {
+                sendGlobalHeartbeat();
+                if (currentRoomCode && roomReady) sendHello(false);
+            }
+        });
 
         // --- ZAKŁADKI (4 PODSTRONY: GRAJ / BAZA HASEŁ / RANKINGI / ADMIN) ---
         window.switchTab = function(tab) {
@@ -2023,22 +2438,26 @@
             showToast('Przejąłeś uprawnienia Hosta / Administratora pokoju!', 'success');
         };
 
+        // Każdy gracz jest "właścicielem" swojego rekordu (wersja = rev). Host zmienia punkty podbijając rev,
+        // dzięki czemu stare dane od innych graczy już ich nie cofają.
+        function adminModifyPlayer(playerId, mutate) {
+            const target = playerId === myPlayer.id ? myPlayer : roomPlayers[playerId];
+            if (!target) return null;
+            mutate(target);
+            target.rev = (target.rev || 0) + 1;
+            target.ts = Date.now();
+            return target;
+        }
+
         window.adminAdjustPlayerScore = function(playerId, delta) {
             if (!isRoomHost()) {
                 showToast('Tylko Host / Administrator może edytować punkty! Kliknij "Przejmij rolę Admina".', 'warning');
                 return;
             }
-            const target = roomPlayers[playerId];
+            const target = adminModifyPlayer(playerId, p => { p.score = (p.score || 0) + delta; });
             if (!target) return;
-
-            target.score = (target.score || 0) + delta;
-            if (playerId === myPlayer.id) {
-                myPlayer.score = target.score;
-            }
-
-            window._lastAdminActionAt = Date.now();
             updateUI();
-            broadcastRoomState({ adminActionAt: window._lastAdminActionAt });
+            broadcastRoomState();
             showToast(`Zmieniono punkty gracza ${target.nick}: ${delta > 0 ? '+' + delta : delta} pkt`, 'info');
         };
 
@@ -2047,21 +2466,10 @@
                 showToast('Tylko Host / Administrator może zerować punkty!', 'warning');
                 return;
             }
-            const target = roomPlayers[playerId];
+            const target = adminModifyPlayer(playerId, p => { p.score = 0; p.guessedCount = 0; p.passedCount = 0; });
             if (!target) return;
-
-            target.score = 0;
-            target.guessedCount = 0;
-            target.passedCount = 0;
-            if (playerId === myPlayer.id) {
-                myPlayer.score = 0;
-                myPlayer.guessedCount = 0;
-                myPlayer.passedCount = 0;
-            }
-
-            window._lastAdminActionAt = Date.now();
             updateUI();
-            broadcastRoomState({ adminActionAt: window._lastAdminActionAt });
+            broadcastRoomState();
             showToast(`Wyzerowano punkty gracza ${target.nick}!`, 'info');
         };
 
@@ -2075,12 +2483,12 @@
                 return;
             }
             const targetNick = roomPlayers[playerId]?.nick || 'Gracz';
+            publishRoom({ t: 'KICK', targetId: playerId });
             delete roomPlayers[playerId];
-
-            window._lastAdminActionAt = Date.now();
+            delete roomPresence[playerId];
             updateUI();
-            broadcastRoomState({ adminActionAt: window._lastAdminActionAt });
-            showToast(`Usunięto gracza ${targetNick} z listy pokoju.`, 'warning');
+            broadcastRoomState();
+            showToast(`Usunięto gracza ${targetNick} z pokoju.`, 'warning');
         };
 
         window.adminResetAllScores = function() {
@@ -2088,22 +2496,11 @@
                 showToast('Tylko Host / Administrator może zresetować cały ranking!', 'warning');
                 return;
             }
-            Object.values(roomPlayers).forEach(p => {
-                p.score = 0;
-                p.guessedCount = 0;
-                p.passedCount = 0;
+            getVisiblePlayers().forEach(p => {
+                adminModifyPlayer(p.id, t => { t.score = 0; t.guessedCount = 0; t.passedCount = 0; });
             });
-            myPlayer.score = 0;
-            myPlayer.guessedCount = 0;
-            myPlayer.passedCount = 0;
-
-            window._lastScoresResetAt = Date.now();
-            window._lastAdminActionAt = Date.now();
             updateUI();
-            broadcastRoomState({
-                scoresResetAt: window._lastScoresResetAt,
-                adminActionAt: window._lastAdminActionAt
-            });
+            broadcastRoomState();
             showToast('Ranking wszystkich graczy został zresetowany do 0 pkt!', 'success');
         };
 
@@ -2292,6 +2689,7 @@
                 time: Date.now()
             });
 
+            bumpMyRev();
             const sign = currentRoundNetPoints > 0 ? `+${currentRoundNetPoints}` : `${currentRoundNetPoints}`;
             document.getElementById('active-score-counter').textContent = sign;
 
@@ -2399,12 +2797,10 @@
             }
 
             // Renderowanie Ekipy w Lobby + Licznik LIVE
-            const playersArr = Object.values(roomPlayers).sort((a, b) => (b.score || 0) - (a.score || 0));
+            const playersArr = getVisiblePlayers().sort((a, b) => (b.score || 0) - (a.score || 0));
             const onlineCount = Math.max(1, playersArr.length);
             document.getElementById('players-online-count').textContent = `${onlineCount} online`;
             document.getElementById('header-live-count').textContent = onlineCount;
-            const globalCounter = document.getElementById('global-live-counter');
-            if (globalCounter) globalCounter.textContent = onlineCount;
 
             const rosterGrid = document.getElementById('players-roster-grid');
             rosterGrid.innerHTML = '';
@@ -2634,8 +3030,26 @@
         window.addEventListener('DOMContentLoaded', () => {
             initLobbyScreen();
             initCloudEngine();
+            initGlobalPresence();
             updateUI();
+            checkForNewVersion();
         });
+
+        // Jeśli ktoś ma starą wersję strony w cache, pobiera nową i przeładowuje się sam
+        function checkForNewVersion() {
+            try {
+                const base = location.href.split('#')[0].split('?')[0];
+                fetch(base + '?cb=' + Date.now(), { cache: 'no-store' })
+                    .then(r => r.text())
+                    .then(t => {
+                        const m = t.match(/BUILD_ID\s*=\s*'(v\d[^']*)'/);
+                        if (m && m[1] !== BUILD_ID) {
+                            location.replace(base + '?v=' + encodeURIComponent(m[1]));
+                        }
+                    })
+                    .catch(() => {});
+            } catch (e) {}
+        }
     </script>
 </body>
 </html>
