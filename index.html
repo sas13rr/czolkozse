@@ -216,13 +216,13 @@
                     </div>
 
                     <p id="account-box-hint" class="text-[11px] text-slate-300">
-                        Podaj login/e-mail i hasło, aby zapisać swój profil na stałe:
+                        Wymyśl login i hasło (min. 4 znaki – cyfry lub litery), aby zapisać profil na stałe:
                     </p>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <input type="text" id="player-email-input" placeholder="Login lub E-mail..." 
+                        <input type="text" id="player-email-input" placeholder="Login (litery / cyfry)" maxlength="20" autocomplete="username" autocapitalize="none" spellcheck="false" 
                             class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-400 rounded-xl px-3.5 py-2.5 text-xs text-white font-bold placeholder-slate-500 focus:outline-none">
-                        <input type="password" id="player-pin-input" maxlength="12" placeholder="Hasło / PIN (min. 4 znaki)" 
+                        <input type="password" id="player-pin-input" maxlength="20" autocomplete="current-password" placeholder="Hasło / PIN (min. 4 znaki)" 
                             class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-400 rounded-xl px-3.5 py-2.5 text-xs text-white font-bold placeholder-slate-500 focus:outline-none">
                     </div>
 
@@ -355,7 +355,7 @@
                     <i class="fa-solid fa-expand" id="fullscreen-icon"></i>
                 </button>
 
-                <button onclick="openVipAccessModal()" id="vip-access-btn" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-indigo-950/80 text-amber-400 border border-slate-700/60 flex items-center justify-center text-sm transition" title="Zarządzaj dostępem VIP (Lista maili/loginów)">
+                <button onclick="openVipAccessModal()" id="vip-access-btn" class="hidden w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-indigo-950/80 text-amber-400 border border-slate-700/60 flex items-center justify-center text-sm transition" title="Zarządzaj dostępem VIP (lista loginów)">
                     <i class="fa-solid fa-user-lock"></i>
                 </button>
 
@@ -380,7 +380,7 @@
                     <span>Rankingi</span>
                     <span id="nav-guessed-count" class="bg-slate-800 text-emerald-300 text-[11px] px-1.5 py-0.5 rounded-full font-extrabold">0</span>
                 </button>
-                <button onclick="switchTab('admin')" id="tab-btn-admin" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                <button onclick="switchTab('admin')" id="tab-btn-admin" class="hidden flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
                     <i class="fa-solid fa-shield-halved text-rose-400"></i>
                     <span>Admin</span>
                 </button>
@@ -701,10 +701,6 @@
                         </p>
                     </div>
 
-                    <!-- Przycisk odblokowania Admina (gdyby host odświeżył stronę lub wszedł z innego urządzenia) -->
-                    <button id="claim-host-btn" onclick="claimRoomHost()" class="hidden text-xs font-extrabold px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-md">
-                        <i class="fa-solid fa-crown mr-1"></i> Przejmij rolę Admina / Hosta
-                    </button>
                 </div>
 
                 <!-- Szybkie Akcje Administracyjne (Reset Rankingu, Reset Historii, Dostęp VIP) -->
@@ -744,7 +740,7 @@
                         </div>
                         <div>
                             <div class="font-display font-bold text-sm text-white">Lista VIP / Dostęp</div>
-                            <div class="text-[11px] text-slate-400">Wybierz kto może wejść do pokoju po loginie lub mailu.</div>
+                            <div class="text-[11px] text-slate-400">Wybierz, kto może wejść do pokoju (po loginie lub nicku).</div>
                         </div>
                     </button>
                 </div>
@@ -982,14 +978,14 @@
                 <button onclick="closeVipAccessModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <p class="text-xs text-slate-400">
-                Możesz zostawić pokój otwarty dla każdego z kodem albo wpisać listę <b>loginów / maili</b> kolegów, którzy mają prawo wejść do tego pokoju.
+                Możesz zostawić pokój otwarty dla każdego z kodem albo wpisać listę <b>loginów / nicków</b> kolegów, którzy mają prawo wejść do tego pokoju.
             </p>
             <label class="flex items-center gap-2.5 cursor-pointer bg-slate-950 p-3 rounded-xl border border-slate-800">
                 <input type="checkbox" id="vip-whitelist-toggle" class="w-4 h-4 rounded accent-amber-500">
-                <span class="text-xs font-bold text-amber-300">Wymagaj zatwierdzonego maila / loginu przy wejściu</span>
+                <span class="text-xs font-bold text-amber-300">Wymagaj zatwierdzonego loginu / nicku przy wejściu</span>
             </label>
             <div>
-                <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1">Dopuszczone maile lub loginy (po przecinku lub w nowej linii):</label>
+                <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1">Dopuszczone loginy lub nicki (po przecinku lub w nowej linii):</label>
                 <textarea id="vip-whitelist-textarea" rows="3" placeholder="np. antonio@szkola.pl, kacper123, michal..." class="w-full bg-slate-950 border border-slate-700 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-amber-400"></textarea>
             </div>
             <div class="flex gap-3">
@@ -1008,7 +1004,21 @@
         const AVATARS = ['😎', '🤠', '👽', '🐸', '🦊', '🐱', '🐶', '🐵', '👻', '🤖', '🦄', '🦖'];
 
         // --- WERSJA STRONY + STAŁE ID (sprawdzane przy starcie, żeby nikt nie siedział na starej wersji z cache) ---
-        const BUILD_ID = 'v5-2026-11-09';
+        const BUILD_ID = 'v7-2026-11-09';
+
+        // =====================================================================
+        // BAZA KONT (Firebase Firestore, darmowy plan Spark) - WKLEJ TU SWÓJ CONFIG
+        // Instrukcja: Firebase Console -> projekt -> Ustawienia -> Twoje aplikacje -> Web (</>) -> firebaseConfig
+        // Dopóki apiKey i projectId są puste, konta zapisują się tylko na tym urządzeniu (localStorage).
+        // =====================================================================
+        const FIREBASE_CONFIG = {
+            apiKey: "",
+            authDomain: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
+        };
         const TAB_ID = 't_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
         function getStableGuestId() {
             try {
@@ -1286,7 +1296,7 @@
                     title.className = 'text-xs font-extrabold uppercase tracking-wider text-pink-400';
                     badge.textContent = 'NOWE KONTO';
                     badge.className = 'text-[10px] bg-pink-500/20 text-pink-300 px-2 py-0.5 rounded-md font-bold';
-                    hint.textContent = 'Podaj login/e-mail i hasło, aby zapisać swój profil na stałe:';
+                    hint.textContent = 'Wymyśl login i hasło (min. 4 znaki – cyfry lub litery), aby zapisać profil na stałe:';
                     switchLink.textContent = 'Masz już konto? Zaloguj się';
                     submitLabel.textContent = 'DALEJ';
                 } else {
@@ -1294,7 +1304,7 @@
                     title.className = 'text-xs font-extrabold uppercase tracking-wider text-emerald-400';
                     badge.textContent = 'LOGOWANIE';
                     badge.className = 'text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md font-bold';
-                    hint.textContent = 'Wpisz swój login lub e-mail oraz hasło/PIN:';
+                    hint.textContent = 'Wpisz swój login oraz hasło / PIN:';
                     switchLink.textContent = 'Nie masz jeszcze konta? Załóż konto';
                     submitLabel.textContent = 'DALEJ';
                 }
@@ -1322,40 +1332,76 @@
             const pinVal = document.getElementById('player-pin-input').value.trim();
 
             if (accountType === 'login' || accountType === 'register') {
-                if (!emailVal || pinVal.length < 4) {
-                    showToast('Podaj login/e-mail oraz min. 4-znakowe hasło/PIN!', 'warning');
+                if (!/^[a-z0-9_]{3,20}$/.test(emailVal)) {
+                    showToast('Login: 3–20 znaków, tylko litery (bez polskich), cyfry i _ !', 'warning');
                     return;
                 }
-                const cleanLogin = emailVal.replace(/[^a-z0-9]/g, '_');
-                myPlayer.id = 'acc_' + cleanLogin;
-                myPlayer.emailOrLogin = emailVal;
-
-                if (cloudDb && cloudUser && cloudFns) {
+                if (pinVal.length < 4) {
+                    showToast('Hasło / PIN musi mieć min. 4 znaki (cyfry lub litery)!', 'warning');
+                    return;
+                }
+                const submitLabel = document.getElementById('step1-submit-label');
+                if (submitLabel) submitLabel.textContent = 'ŁĄCZENIE…';
+                try {
+                    await cloudReadyPromise;
+                    const pinHash = await hashPin(emailVal, pinVal);
+                    let existing = null;
                     try {
-                        const accRef = cloudFns.doc(cloudDb, 'artifacts', appId, 'public', 'data', 'czolko_accounts', myPlayer.id);
-                        const snap = await cloudFns.getDoc(accRef);
-                        if (snap.exists()) {
-                            const data = snap.data();
-                            if (data.pin && data.pin !== pinVal) {
-                                showToast('Błędne hasło / PIN dla tego konta!', 'error');
-                                return;
-                            }
-                            if (!myPlayer.avatarImg && data.avatarImg) {
-                                myPlayer.avatarImg = data.avatarImg;
-                            }
-                        } else if (accountType === 'login') {
-                            showToast('Nie znaleziono konta – automatycznie utworzono nowe konto dla tego loginu!', 'info');
+                        existing = await accountStore.get(emailVal);
+                    } catch (e) {
+                        showToast('Nie mogę połączyć się z bazą kont. Sprawdź internet i spróbuj ponownie.', 'error');
+                        return;
+                    }
+
+                    if (accountType === 'register') {
+                        if (existing) {
+                            showToast('Ten login jest już zajęty – wymyśl inny albo kliknij „Masz już konto? Zaloguj się”.', 'error');
+                            return;
                         }
-                        await cloudFns.setDoc(accRef, {
-                            id: myPlayer.id,
-                            nick: nickInput,
-                            emailOrLogin: emailVal,
-                            pin: pinVal,
-                            avatar: myPlayer.avatar,
-                            avatarImg: myPlayer.avatarImg || null,
-                            updatedAt: Date.now()
-                        });
-                    } catch (e) {}
+                        try {
+                            await accountStore.save(emailVal, {
+                                id: 'acc_' + emailVal,
+                                login: emailVal,
+                                nick: nickInput,
+                                pinHash,
+                                avatar: myPlayer.avatar,
+                                avatarImg: myPlayer.avatarImg || null,
+                                createdAt: Date.now(),
+                                updatedAt: Date.now()
+                            });
+                        } catch (e) {
+                            showToast('Nie udało się zapisać konta w bazie. Spróbuj ponownie.', 'error');
+                            return;
+                        }
+                        showToast(accountStore.isCloud()
+                            ? `Konto „${emailVal}” założone! Możesz się z niego logować na każdym urządzeniu.`
+                            : `Konto „${emailVal}” założone (zapisane tylko na tym urządzeniu – baza nie jest podłączona).`, 'success');
+                    } else {
+                        if (!existing) {
+                            showToast('Nie ma takiego konta. Kliknij „Nie masz jeszcze konta? Załóż konto”.', 'error');
+                            return;
+                        }
+                        if (existing.pinHash !== pinHash) {
+                            showToast('Błędne hasło / PIN dla tego konta!', 'error');
+                            return;
+                        }
+                        if (!myPlayer.avatarImg && existing.avatarImg) myPlayer.avatarImg = existing.avatarImg;
+                        if (!myPlayer.avatarImg && existing.avatar && AVATARS.includes(existing.avatar)) myPlayer.avatar = existing.avatar;
+                        try {
+                            await accountStore.save(emailVal, {
+                                ...existing,
+                                nick: nickInput,
+                                avatar: myPlayer.avatar,
+                                avatarImg: myPlayer.avatarImg || existing.avatarImg || null,
+                                updatedAt: Date.now()
+                            });
+                        } catch (e) {}
+                        showToast(`Zalogowano jako ${emailVal}. Witaj, ${nickInput}!`, 'success');
+                    }
+                    myPlayer.id = 'acc_' + emailVal;
+                    myPlayer.emailOrLogin = emailVal;
+                } finally {
+                    if (submitLabel) submitLabel.textContent = 'DALEJ';
                 }
             } else {
                 myPlayer.id = getStableGuestId();
@@ -1363,6 +1409,7 @@
             }
 
             myPlayer.nick = nickInput;
+            rememberProfile((accountType === 'login' || accountType === 'register') ? emailVal : '');
             renderAuthAvatarPreview();
             document.getElementById('step2-nick-preview').textContent = myPlayer.nick;
 
@@ -1619,17 +1666,29 @@
         };
 
         window.copyRoomInvite = function() {
+            let link = currentRoomCode;
+            try {
+                const u = new URL(location.href);
+                u.search = '';
+                u.hash = '';
+                u.searchParams.set('room', currentRoomCode);
+                link = u.toString();
+            } catch (e) {}
             const temp = document.createElement('textarea');
-            temp.value = currentRoomCode;
+            temp.value = link;
             document.body.appendChild(temp);
             temp.select();
-            document.execCommand('copy');
+            try { document.execCommand('copy'); } catch (e) {}
             document.body.removeChild(temp);
-            showToast(`Skopiowano kod pokoju: ${currentRoomCode}!`, 'info');
+            showToast(`Skopiowano link do pokoju #${currentRoomCode} – wyślij go znajomym!`, 'info');
         };
 
         // --- AUTORYZACJA VIP (LISTA DOPUSZCZONYCH MAILI / LOGINÓW PRZEZ HOSTA) ---
         window.openVipAccessModal = function() {
+            if (!isRoomHost()) {
+                showToast('Tylko Host pokoju może zarządzać dostępem VIP!', 'warning');
+                return;
+            }
             document.getElementById('vip-whitelist-toggle').checked = !!roomSecurity.requireWhitelist;
             document.getElementById('vip-whitelist-textarea').value = (roomSecurity.allowedLogins || []).join(', ');
             document.getElementById('modal-vip-access').classList.remove('hidden');
@@ -1642,6 +1701,10 @@
         };
 
         window.saveVipAccessSettings = function() {
+            if (!isRoomHost()) {
+                showToast('Tylko Host pokoju może zarządzać dostępem VIP!', 'warning');
+                return;
+            }
             const enabled = document.getElementById('vip-whitelist-toggle').checked;
             const rawList = document.getElementById('vip-whitelist-textarea').value;
             const parsed = rawList.split(/[\n,]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
@@ -1692,26 +1755,76 @@
         let lastFullStateAt = 0;
         let lastVisibleSig = '';
 
-        async function initCloudEngine() {
-            try {
-                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        let cloudReadyPromise = Promise.resolve();
+        function initCloudEngine() {
+            cloudReadyPromise = (async () => {
+                try {
+                    if (!FIREBASE_CONFIG.apiKey || !FIREBASE_CONFIG.projectId) return;
                     const fbApp = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
-                    const fbAuth = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
                     const fbStore = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-
-                    const firebaseConfig = JSON.parse(__firebase_config);
-                    const app = fbApp.initializeApp(firebaseConfig);
-                    const auth = fbAuth.getAuth(app);
+                    const app = fbApp.initializeApp(FIREBASE_CONFIG);
                     cloudDb = fbStore.getFirestore(app);
                     cloudFns = fbStore;
+                    // cloudUser celowo zostaje null: baza służy TYLKO do kont, pokoje działają przez MQTT
+                } catch (e) { cloudDb = null; cloudFns = null; }
+            })();
+            return cloudReadyPromise;
+        }
 
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await fbAuth.signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await fbAuth.signInAnonymously(auth);
-                    }
-                    cloudUser = auth.currentUser;
+        // --- KONTA: hasło/PIN jest haszowane (PBKDF2), do bazy nie trafia nigdy jawny tekst ---
+        async function hashPin(login, pin) {
+            try {
+                const enc = new TextEncoder();
+                const key = await crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveBits']);
+                const bits = await crypto.subtle.deriveBits(
+                    { name: 'PBKDF2', salt: enc.encode('czolko-v7:' + login), iterations: 60000, hash: 'SHA-256' }, key, 256);
+                return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                return 'plain:' + pin; // awaryjnie (stara przeglądarka bez WebCrypto)
+            }
+        }
+
+        const accountStore = {
+            isCloud() { return !!(cloudDb && cloudFns); },
+            async get(login) {
+                if (this.isCloud()) {
+                    const snap = await cloudFns.getDoc(cloudFns.doc(cloudDb, 'czolko_accounts', login));
+                    return snap.exists() ? snap.data() : null;
                 }
+                try { return (JSON.parse(localStorage.getItem('czolko_accounts') || '{}'))[login] || null; } catch (e) { return null; }
+            },
+            async save(login, data) {
+                if (this.isCloud()) {
+                    await cloudFns.setDoc(cloudFns.doc(cloudDb, 'czolko_accounts', login), data);
+                    return;
+                }
+                try {
+                    const all = JSON.parse(localStorage.getItem('czolko_accounts') || '{}');
+                    all[login] = data;
+                    localStorage.setItem('czolko_accounts', JSON.stringify(all));
+                } catch (e) {}
+            }
+        };
+
+        function rememberProfile(login) {
+            try {
+                localStorage.setItem('czolko_profile', JSON.stringify({
+                    nick: myPlayer.nick, login: login || '', avatar: myPlayer.avatar
+                }));
+            } catch (e) {}
+        }
+
+        function loadRememberedProfile() {
+            try {
+                const p = JSON.parse(localStorage.getItem('czolko_profile') || 'null');
+                if (!p) return;
+                const nickEl = document.getElementById('player-nick-input');
+                const loginEl = document.getElementById('player-email-input');
+                if (nickEl && !nickEl.value && p.nick) nickEl.value = p.nick;
+                if (loginEl && !loginEl.value && p.login) loginEl.value = p.login;
+                if (p.avatar && AVATARS.includes(p.avatar)) myPlayer.avatar = p.avatar;
+                if (p.login) { setAccountType('login'); }
+                initLobbyScreen();
             } catch (e) {}
         }
 
@@ -2057,7 +2170,7 @@
                     const myLogin = (myPlayer.emailOrLogin || '').toLowerCase();
                     const myNick = (myPlayer.nick || '').toLowerCase();
                     if (!roomSecurity.allowedLogins.includes(myLogin) && !roomSecurity.allowedLogins.includes(myNick)) {
-                        showToast('Ten pokój wymaga zatwierdzonego przez Hosta maila lub loginu!', 'error');
+                        showToast('Ten pokój wymaga loginu lub nicku zatwierdzonego przez Hosta!', 'error');
                         leaveRoom();
                         return;
                     }
@@ -2171,6 +2284,7 @@
 
         // --- ZAKŁADKI (4 PODSTRONY: GRAJ / BAZA HASEŁ / RANKINGI / ADMIN) ---
         window.switchTab = function(tab) {
+            if (tab === 'admin' && !isRoomHost()) tab = 'play';
             const viewPlay = document.getElementById('view-play');
             const viewWords = document.getElementById('view-words');
             const viewRanking = document.getElementById('view-ranking');
@@ -2192,7 +2306,10 @@
             btnPlay.className = tab === 'play' ? activeBtn : inactiveBtn;
             btnWords.className = tab === 'words' ? activeBtn : inactiveBtn;
             btnRanking.className = tab === 'ranking' ? activeBtn : inactiveBtn;
-            if (btnAdmin) btnAdmin.className = tab === 'admin' ? activeBtn : inactiveBtn;
+            if (btnAdmin) {
+                btnAdmin.className = tab === 'admin' ? activeBtn : inactiveBtn;
+                btnAdmin.classList.toggle('hidden', !isRoomHost());
+            }
 
             updateUI();
         };
@@ -2428,14 +2545,6 @@
             updateUI();
             broadcastRoomState();
             showToast('Zasady pokoju zostały zaktualizowane u wszystkich graczy!', 'info');
-        };
-
-        window.claimRoomHost = function() {
-            roomHostId = myPlayer.id;
-            window._lastHostUpdatedAt = Date.now();
-            updateUI();
-            broadcastRoomState({ hostUpdatedAt: window._lastHostUpdatedAt });
-            showToast('Przejąłeś uprawnienia Hosta / Administratora pokoju!', 'success');
         };
 
         // Każdy gracz jest "właścicielem" swojego rekordu (wersja = rev). Host zmienia punkty podbijając rev,
@@ -2791,9 +2900,16 @@
                     : `👑 Zasady pokoju ustala Host (<b>${escapeHtml(hostNick)}</b>) – każdy może dodawać hasła!`;
             }
 
-            const claimBtn = document.getElementById('claim-host-btn');
-            if (claimBtn) {
-                claimBtn.classList.toggle('hidden', amHost);
+            // Zakładka Admin i przycisk VIP widoczne TYLKO dla hosta
+            const adminTabBtn = document.getElementById('tab-btn-admin');
+            if (adminTabBtn) adminTabBtn.classList.toggle('hidden', !amHost);
+            const vipBtn = document.getElementById('vip-access-btn');
+            if (vipBtn) vipBtn.classList.toggle('hidden', !amHost);
+            const adminView = document.getElementById('view-admin');
+            if (!amHost && adminView && !adminView.classList.contains('hidden') && !window._adminRedirect) {
+                window._adminRedirect = true;
+                try { window.switchTab('play'); } finally { window._adminRedirect = false; }
+                return;
             }
 
             // Renderowanie Ekipy w Lobby + Licznik LIVE
@@ -3030,6 +3146,15 @@
         window.addEventListener('DOMContentLoaded', () => {
             initLobbyScreen();
             initCloudEngine();
+            loadRememberedProfile();
+            try {
+                const roomParam = new URLSearchParams(location.search).get('room');
+                if (roomParam) {
+                    const code = roomParam.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+                    const joinInput = document.getElementById('join-room-code-input');
+                    if (code && joinInput) { joinInput.value = code; setAuthMode('join'); showToast(`Link do pokoju #${code} – wpisz nick i dołącz!`, 'info'); }
+                }
+            } catch (e) {}
             initGlobalPresence();
             updateUI();
             checkForNewVersion();
@@ -3044,7 +3169,9 @@
                     .then(t => {
                         const m = t.match(/BUILD_ID\s*=\s*'(v\d[^']*)'/);
                         if (m && m[1] !== BUILD_ID) {
-                            location.replace(base + '?v=' + encodeURIComponent(m[1]));
+                            const u = new URL(location.href);
+                            u.searchParams.set('v', m[1]);
+                            location.replace(u.toString());
                         }
                     })
                     .catch(() => {});
