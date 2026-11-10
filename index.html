@@ -1,0 +1,2917 @@
+<!DOCTYPE html>
+<html lang="pl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CZÓŁKO.IO - Imprezowa Gra Ekipy</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- MQTT.js (Darmowy przekaźnik Live WebSockets dla GitHub Pages - działa na 6+ telefonach bez konfiguracji!) -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <!-- Google Fonts: Fredoka & Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        display: ['Fredoka', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 3s ease-in-out infinite',
+                        'pop': 'pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'pulse-glow': 'pulseGlow 2s infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-6px)' },
+                        },
+                        pop: {
+                            '0%': { transform: 'scale(0.8)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+                            '50%': { opacity: '0.7', transform: 'scale(1.03)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .no-select {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Tło w stylu Gartic Phone / Among Us */
+        .party-bg {
+            background-color: #090d16;
+            background-image: 
+                radial-gradient(at 15% 15%, rgba(99, 102, 241, 0.18) 0px, transparent 50%),
+                radial-gradient(at 85% 80%, rgba(236, 72, 153, 0.15) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(139, 92, 246, 0.08) 0px, transparent 60%);
+        }
+
+        /* Karta hasła na czole z efektem 3D */
+        .forehead-card {
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.25);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .forehead-card.flash-correct {
+            transform: scale(1.06) rotate(1deg);
+            border-color: #10b981 !important;
+            background: linear-gradient(135deg, rgba(6, 78, 59, 0.95), rgba(4, 120, 87, 0.9)) !important;
+        }
+        .forehead-card.flash-pass {
+            transform: scale(0.95) rotate(-1deg);
+            border-color: #f43f5e !important;
+            background: linear-gradient(135deg, rgba(136, 19, 55, 0.95), rgba(190, 18, 60, 0.9)) !important;
+        }
+
+        /* Idealne dopasowanie dla trzymania telefonu PIONOWO jak i POZIOMO (Landscape) */
+        @media (orientation: landscape) and (max-height: 540px) {
+            #overlay-active-game {
+                padding: 0.5rem 1rem !important;
+            }
+            #forehead-word-card {
+                min-height: 115px !important;
+                padding: 0.75rem 1.25rem !important;
+                border-radius: 1.5rem !important;
+            }
+            #active-word-text {
+                font-size: clamp(1.75rem, 6vw, 3.25rem) !important;
+            }
+            #active-action-buttons {
+                height: 4.5rem !important;
+            }
+            #overlay-countdown h2 {
+                font-size: 1.75rem !important;
+            }
+            #pre-countdown-number {
+                width: 6.5rem !important;
+                height: 6.5rem !important;
+                font-size: 3.5rem !important;
+            }
+        }
+    </style>
+</head>
+<body class="party-bg text-slate-100 font-sans min-h-screen flex flex-col overflow-x-hidden selection:bg-pink-500 selection:text-white">
+
+    <!-- POWIADOMIENIA (TOAST) -->
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 w-11/12 max-w-md pointer-events-none"></div>
+
+    <!-- ========================================================================= -->
+    <!-- EKRAN POWITALNY (DWUETAPOWY: 1. LOGOWANIE / KONTO -> 2. KOD POKOJU)       -->
+    <!-- ========================================================================= -->
+    <div id="screen-lobby-auth" class="fixed inset-0 z-40 party-bg flex flex-col items-center justify-center p-4 overflow-y-auto">
+        
+        <!-- Górny Pasek nad logowaniem: Licznik Gracze LIVE (v11) + Pełny Ekran -->
+        <div class="w-full max-w-md flex items-center justify-between mb-3 px-1">
+            <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3.5 py-1.5 rounded-full shadow-lg">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span class="text-[11px] font-bold text-slate-200">Gracze LIVE <span class="text-indigo-400 font-extrabold">(v11)</span>: <b id="global-live-counter" class="text-emerald-400">1</b></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="toggleFullScreen()" class="bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition active:scale-95">
+                    <i class="fa-solid fa-expand text-indigo-400"></i>
+                    <span>Pełny ekran</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="w-full max-w-md my-auto pb-4">
+            
+            <!-- Logo Gry (bez numeru wersji przy tytule) -->
+            <div class="text-center mb-4">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 shadow-2xl shadow-purple-500/40 mb-2 animate-float border-2 border-white/20">
+                    <i class="fa-solid fa-mobile-screen-button text-3xl text-white transform -rotate-90"></i>
+                </div>
+                <h1 class="font-display font-bold text-4xl tracking-wider bg-gradient-to-r from-white via-indigo-200 to-pink-300 bg-clip-text text-transparent">
+                    CZÓŁKO<span class="text-pink-500">.IO</span>
+                </h1>
+                <p class="text-xs text-slate-400 font-medium">Imprezowe Czółko na żywo z własnymi hasłami</p>
+            </div>
+
+            <!-- =============================================================== -->
+            <!-- ETAP 1: NOWE MENU LOGOWANIA (Nick + Zdjęcie / Animowany GIF)    -->
+            <!-- =============================================================== -->
+            <div id="auth-step-1" class="bg-slate-900/95 backdrop-blur-xl border-2 border-indigo-500/30 rounded-[2rem] p-5 sm:p-6 shadow-2xl space-y-5 animate-pop">
+                
+                <!-- Nagłówek karty logowania -->
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3.5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-lg">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                        </div>
+                        <div>
+                            <h2 id="step1-header-title" class="font-display font-bold text-2xl text-white leading-none">Logowanie</h2>
+                            <span class="text-xs text-slate-400">Ustaw swój wygląd i nazwę w ekipie</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Centralny Podgląd Profilowego (Zdjęcie / GIF / Emoji) -->
+                <div class="bg-slate-950/90 border border-slate-800/90 rounded-2xl p-4 flex flex-col gap-3">
+                    <div class="flex items-center gap-4">
+                        <div class="relative group shrink-0">
+                            <div id="auth-avatar-preview" class="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-pink-500 border-2 border-white/30 flex items-center justify-center text-4xl overflow-hidden shadow-xl">
+                                😎
+                            </div>
+                            <label for="custom-avatar-upload" class="cursor-pointer absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl bg-pink-600 hover:bg-pink-500 text-white border-2 border-slate-950 flex items-center justify-center text-xs shadow-lg transition active:scale-90" title="Wgraj zdjęcie lub animowany GIF">
+                                <i class="fa-solid fa-camera"></i>
+                            </label>
+                        </div>
+
+                        <div class="flex-1 min-w-0 space-y-2">
+                            <div class="text-xs font-bold text-slate-300">Zdjęcie profilowe lub GIF:</div>
+                            <div class="flex flex-wrap gap-2">
+                                <label for="custom-avatar-upload" class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold bg-gradient-to-r from-pink-600/30 to-indigo-600/30 hover:from-pink-600/50 hover:to-indigo-600/50 text-white border border-pink-500/40 px-3.5 py-2 rounded-xl transition active:scale-95 shadow-sm">
+                                    <i class="fa-solid fa-image text-pink-400"></i>
+                                    <span>Wgraj Zdjęcie / GIF</span>
+                                </label>
+                                <input type="file" id="custom-avatar-upload" accept="image/*,image/gif" class="hidden" onchange="handleCustomAvatarUpload(event)">
+                            </div>
+                            <p class="text-[11px] text-slate-400">Obsługuje zwykłe zdjęcia oraz ruchome GIF-y!</p>
+                        </div>
+                    </div>
+
+                    <!-- Pasek szybkiego wyboru emotki -->
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Albo wybierz gotową emotkę:</span>
+                        <div class="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-slate-800 overflow-x-auto no-scrollbar" id="avatar-picker"></div>
+                    </div>
+                </div>
+
+                <!-- Pole na Nazwę / Nick -->
+                <div>
+                    <label for="player-nick-input" class="text-xs font-bold uppercase tracking-wider text-slate-300 block mb-1.5">
+                        Twoja nazwa (Nick):
+                    </label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400"></i>
+                        <input type="text" id="player-nick-input" maxlength="14" placeholder="Wpisz swój nick..." autocomplete="off"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault(); proceedToRoomStep();}"
+                            class="w-full bg-slate-950 border-2 border-slate-800 focus:border-indigo-500 rounded-2xl pl-11 pr-4 py-3.5 text-white font-bold placeholder-slate-500 focus:outline-none transition text-base">
+                    </div>
+                </div>
+
+                <!-- Przycisk DALEJ -->
+                <button type="button" id="btn-login-next" onclick="proceedToRoomStep()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-display font-bold text-xl tracking-wide shadow-xl shadow-indigo-600/30 active:scale-[0.98] transition flex items-center justify-center gap-2 cursor-pointer">
+                    <span id="step1-submit-label">DALEJ</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+
+            <!-- =============================================================== -->
+            <!-- ETAP 2: OKIENKO KODU POKOJU (Pojawia się po kliknięciu DALEJ)   -->
+            <!-- =============================================================== -->
+            <div id="auth-step-2" class="hidden bg-slate-900/95 backdrop-blur-xl border-2 border-slate-800 rounded-[2rem] p-5 sm:p-6 shadow-2xl space-y-5 animate-pop">
+                
+                <!-- Pasek zalogowanego gracza z możliwością cofnięcia -->
+                <div class="flex items-center justify-between bg-slate-950/90 border border-slate-800 rounded-2xl p-3">
+                    <div class="flex items-center gap-3">
+                        <div id="step2-avatar-preview" class="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 flex items-center justify-center text-xl overflow-hidden border border-white/20">
+                            😎
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                                <i class="fa-solid fa-circle-check"></i> Twój profil:
+                            </div>
+                            <div id="step2-nick-preview" class="font-display font-bold text-base text-white">Gracz</div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="backToAccountStep()" class="text-xs font-bold text-slate-300 hover:text-white bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 transition">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Wróć
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-pink-400 block">KROK 2 Z 2 • POKÓJ GRY</span>
+                        <h2 class="font-display font-bold text-xl text-white">Wybierz pokój ekipy</h2>
+                    </div>
+
+                    <!-- Przełącznik: Stwórz pokój vs Wpisz kod -->
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button type="button" onclick="setAuthMode('create')" id="mode-btn-create" class="py-3.5 px-3 rounded-2xl font-display font-bold text-sm border-2 border-indigo-500 bg-indigo-600/25 text-white flex flex-col items-center gap-1 transition shadow-md">
+                            <i class="fa-solid fa-crown text-amber-400 text-lg"></i>
+                            <span>Stwórz pokój</span>
+                        </button>
+                        <button type="button" onclick="setAuthMode('join')" id="mode-btn-join" class="py-3.5 px-3 rounded-2xl font-display font-bold text-sm border-2 border-slate-800 bg-slate-950/70 text-slate-400 hover:text-white flex flex-col items-center gap-1 transition">
+                            <i class="fa-solid fa-key text-emerald-400 text-lg"></i>
+                            <span>Mam kod pokoju</span>
+                        </button>
+                    </div>
+
+                    <!-- Widok 1: Tworzenie pokoju (Host) -->
+                    <div id="auth-box-create" class="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-bold">Kod Twojego pokoju:</span>
+                            <button type="button" onclick="rollRandomRoomCode()" class="text-xs font-bold text-indigo-300 hover:text-white flex items-center gap-1.5 bg-indigo-500/20 px-3 py-1 rounded-xl border border-indigo-500/30 active:scale-95 transition">
+                                <i class="fa-solid fa-dice"></i> Losuj inny
+                            </button>
+                        </div>
+                        <input type="text" id="create-room-code-input" maxlength="5" 
+                            oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5)"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault(); enterPartyRoom();}"
+                            class="w-full bg-slate-900 border-2 border-indigo-500/50 focus:border-indigo-400 rounded-xl py-3 px-4 text-center font-display font-bold text-3xl tracking-[0.3em] text-amber-300 uppercase focus:outline-none">
+                        <p class="text-[11px] text-slate-400 text-center">
+                            Możesz też wpisać własną nazwę (do 5 znaków, np. <b class="text-white">EKIPA</b>). Podaj ten kod znajomym!
+                        </p>
+                    </div>
+
+                    <!-- Widok 2: Dołączanie do pokoju -->
+                    <div id="auth-box-join" class="hidden bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+                        <span class="text-xs text-slate-300 font-bold block text-center">Wpisz kod pokoju od znajomego:</span>
+                        <input type="text" id="join-room-code-input" maxlength="5" placeholder="KOD..."
+                            oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5)"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault(); enterPartyRoom();}"
+                            class="w-full bg-slate-900 border-2 border-emerald-500/50 focus:border-emerald-400 rounded-xl py-3 px-4 text-center font-display font-bold text-3xl tracking-[0.3em] text-emerald-300 uppercase placeholder-slate-700 focus:outline-none">
+                        <p class="text-[11px] text-slate-400 text-center">
+                            Po wpisaniu tego samego kodu połączycie się we wspólnym pokoju na żywo.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Przycisk Wejścia do Gry -->
+                <button type="button" onclick="enterPartyRoom()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-white font-display font-bold text-xl tracking-wide shadow-xl shadow-emerald-600/30 active:scale-[0.98] transition flex items-center justify-center gap-2">
+                    <span id="step2-submit-label">GRAJ!</span>
+                    <i class="fa-solid fa-play"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- NAGŁÓWEK W POKOJU GRY (Z PRZYCISKIEM FULL SCREEN I 3 PODSTRONAMI)         -->
+    <!-- ========================================================================= -->
+    <header id="app-header" class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-30">
+        <div class="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+            
+            <!-- Info o Pokoju i Kodzie -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <button onclick="copyRoomInvite()" class="group flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700/80 rounded-2xl px-2.5 py-1.5 transition" title="Kliknij, aby skopiować kod pokoju">
+                    <div id="header-player-avatar-box" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center shadow-md overflow-hidden shrink-0">
+                        <span id="header-player-avatar" class="text-base sm:text-lg">😎</span>
+                    </div>
+                    <div class="text-left">
+                        <div class="flex items-center gap-1">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">KOD:</span>
+                            <span id="header-room-code" class="font-display font-bold text-sm sm:text-base text-amber-300 tracking-wider">-----</span>
+                            <i class="fa-regular fa-copy text-[10px] text-slate-400 group-hover:text-white"></i>
+                        </div>
+                        <div class="flex items-center gap-1 text-[10px] text-slate-300 font-medium">
+                            <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span id="header-player-nick" class="truncate max-w-[75px]">Gracz</span>
+                            <span class="text-emerald-400 font-bold ml-0.5">• <span id="header-live-count">1</span> LIVE (v11)</span>
+                        </div>
+                    </div>
+                </button>
+
+                <!-- Przycisk Pełnego Ekranu na Telefonie -->
+                <button onclick="toggleFullScreen()" id="fullscreen-btn" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-indigo-950/80 text-indigo-300 border border-slate-700/60 flex items-center justify-center text-sm transition" title="Włącz / Wyłącz Pełny Ekran">
+                    <i class="fa-solid fa-expand" id="fullscreen-icon"></i>
+                </button>
+
+                <button onclick="openVipAccessModal()" id="vip-access-btn" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-indigo-950/80 text-amber-400 border border-slate-700/60 flex items-center justify-center text-sm transition" title="Zarządzaj dostępem VIP (Lista maili/loginów)">
+                    <i class="fa-solid fa-user-lock"></i>
+                </button>
+
+                <button onclick="leaveRoom()" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-rose-950/80 text-slate-400 hover:text-rose-400 border border-slate-700/60 flex items-center justify-center text-sm transition" title="Zmień pokój / konto">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+
+            <!-- Nawigacja 3 Podstron: Gra / Baza Haseł / Rankingi -->
+            <nav class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 w-full sm:w-auto justify-between sm:justify-start">
+                <button onclick="switchTab('play')" id="tab-btn-play" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <span>Graj</span>
+                </button>
+                <button onclick="switchTab('words')" id="tab-btn-words" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-fire-flame-curved text-pink-400"></i>
+                    <span>Hasła</span>
+                    <span id="nav-word-count" class="bg-slate-800 text-amber-300 text-[11px] px-1.5 py-0.5 rounded-full font-extrabold">0</span>
+                </button>
+                <button onclick="switchTab('ranking')" id="tab-btn-ranking" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-trophy text-amber-400"></i>
+                    <span>Rankingi</span>
+                    <span id="nav-guessed-count" class="bg-slate-800 text-emerald-300 text-[11px] px-1.5 py-0.5 rounded-full font-extrabold">0</span>
+                </button>
+                <button onclick="switchTab('admin')" id="tab-btn-admin" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-shield-halved text-rose-400"></i>
+                    <span>Admin</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+
+    <!-- ========================================================================= -->
+    <!-- GŁÓWNA ZAWARTOŚĆ POKOJU                                                   -->
+    <!-- ========================================================================= -->
+    <main class="flex-1 flex flex-col max-w-4xl w-full mx-auto p-4 sm:p-6 gap-5">
+
+        <!-- POWIADOMIENIE LIVE: KTOŚ INNY Z EKIPY AKTUALNIE GRA NA CZOLE! -->
+        <div id="live-player-banner" class="hidden bg-gradient-to-r from-amber-500/20 via-pink-500/20 to-indigo-500/20 border-2 border-amber-400/50 rounded-2xl p-3.5 items-center justify-between gap-3 animate-pulse">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">📣</span>
+                <div>
+                    <div class="text-xs font-bold uppercase tracking-wider text-amber-300">Uwaga Ekipa! Trwa runda na żywo!</div>
+                    <div id="live-player-banner-text" class="text-sm font-bold text-white">Gracz trzyma teraz telefon przy czole – podpowiadajcie!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- ZAKŁADKA 1: LOBBY EKIPY + START GRY        -->
+        <!-- ========================================== -->
+        <section id="view-play" class="flex-1 flex flex-col gap-5">
+            
+            <!-- Pasek Ekipy Online (Gracze w pokoju + Licznik LIVE v11) -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-indigo-400">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                            Gracze LIVE <span class="text-pink-400">(v11)</span>:
+                        </span>
+                        <span id="players-online-count" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-extrabold px-2.5 py-0.5 rounded-full">1 online</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="switchTab('ranking')" class="text-xs text-pink-400 hover:text-pink-300 font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-ranking-star"></i> Pełny Ranking
+                        </button>
+                        <button onclick="copyRoomInvite()" class="text-xs text-amber-300 hover:text-amber-200 font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-copy"></i> Kod: <b id="invite-code-inline" class="underline">-----</b>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista kart graczy -->
+                <div id="players-roster-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                    <!-- Dynamicznie renderowani gracze z awatarami i punktami -->
+                </div>
+            </div>
+
+            <!-- Karta Puli Haseł i Ustawień Rundy -->
+            <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/40 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+                    <div class="bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-lg">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-display font-bold text-white leading-none" id="stat-available-words">0</div>
+                            <div class="text-[11px] text-slate-400 mt-1">Dla Ciebie w puli</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-lg">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-display font-bold text-white leading-none" id="stat-total-room-words">0</div>
+                            <div class="text-[11px] text-slate-400 mt-1">Wszystkich w worku</div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-2 sm:col-span-1 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-3.5 flex items-center justify-between sm:justify-start gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg">
+                                <i class="fa-solid fa-plus"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold text-white">Dorzuć hasła</div>
+                                <div class="text-[11px] text-slate-400">Wspólny worek</div>
+                            </div>
+                        </div>
+                        <button onclick="switchTab('words')" class="sm:ml-auto bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-200 hover:text-white text-xs font-bold px-3 py-2 rounded-xl transition">
+                            Dodaj +
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Zasady Pokoju (Synchronizowane przez Hosta + Tryb Bez Limitu Czasu) -->
+                <div class="space-y-3.5 pt-3 border-t border-slate-800/80">
+                    <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950/80 border border-indigo-500/30 rounded-2xl px-4 py-3">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold">∞</span>
+                            <div>
+                                <div class="text-xs font-extrabold uppercase tracking-wider text-white">Tryb Gry: Bez Limitu Czasu</div>
+                                <div id="room-rules-host-label" class="text-[11px] text-slate-400">Zasady pokoju ustala Host – każdy może dodawać hasła!</div>
+                            </div>
+                        </div>
+                        <span class="text-xs font-extrabold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 rounded-full">
+                            ∞ Bez limitu
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                        <label class="flex items-center justify-between gap-2.5 bg-slate-950/60 px-3.5 py-2.5 rounded-xl border border-slate-800">
+                            <div class="flex items-center gap-2.5">
+                                <input type="checkbox" id="block-own-words-toggle" checked onchange="handleHostRuleChange()" class="w-4 h-4 rounded accent-pink-500">
+                                <span class="text-xs text-slate-200 font-semibold">Nie losuj graczom ich własnych haseł</span>
+                            </div>
+                            <span class="host-only-badge text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">Host</span>
+                        </label>
+                        <label class="flex items-center justify-between gap-2.5 bg-slate-950/60 px-3.5 py-2.5 rounded-xl border border-slate-800">
+                            <div class="flex items-center gap-2.5">
+                                <input type="checkbox" id="avoid-repeats-toggle" checked onchange="handleHostRuleChange()" class="w-4 h-4 rounded accent-indigo-500">
+                                <span class="text-xs text-slate-200 font-semibold">Usuwaj odgadnięte hasła z puli</span>
+                            </div>
+                            <span class="host-only-badge text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">Host</span>
+                        </label>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
+                        <span class="text-slate-400">
+                            Kto ma najwięcej punktów wygrywa! <b class="text-emerald-400">+1 pkt SIADŁO</b> • <b class="text-rose-400">-1 pkt PAS</b>
+                        </span>
+                        <button id="btn-reset-used-words" onclick="resetUsedWords()" class="text-pink-400 hover:text-pink-300 font-bold underline">
+                            Przywróć zużyte hasła (<span id="stat-used-words">0</span>)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wielki Przycisk Startu Rundy -->
+            <div class="mt-auto pt-1">
+                <button onclick="startPreGameCountdown()" class="w-full py-5 px-6 rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-display font-bold text-2xl sm:text-3xl tracking-wide shadow-2xl shadow-purple-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 border-2 border-white/15">
+                    <i class="fa-solid fa-dice-d20 text-2xl animate-spin" style="animation-duration: 6s;"></i>
+                    <span>BIORĘ TELEFON NA CZOŁO!</span>
+                </button>
+                <p class="text-center text-xs text-slate-400 mt-2">
+                    Działa idealnie <b>pionowo i poziomo</b>! Masz 3 sekundy na przyłożenie telefonu do czoła.
+                </p>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- ZAKŁADKA 2: BAZA HASEŁ + LOSOWE 25         -->
+        <!-- ========================================== -->
+        <section id="view-words" class="hidden flex-1 flex flex-col gap-5">
+            
+            <!-- Formularz dodawania hasła przez gracza -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="font-display text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-bolt-lightning text-amber-400"></i>
+                        Wymyśl hasło dla ekipy
+                    </h2>
+                    <span class="text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full font-bold">
+                        Ty go nie wylosujesz!
+                    </span>
+                </div>
+
+                <form id="add-word-form" onsubmit="handleAddWord(event)" class="space-y-3.5">
+                    <div class="relative">
+                        <input type="text" id="new-word-input" placeholder="Wpisz np. Kolega Antonio, postać, tekst nauczyciela..." required maxlength="55" autocomplete="off"
+                            class="w-full bg-slate-950 border-2 border-slate-700 focus:border-pink-500 rounded-2xl px-4 py-3.5 text-white placeholder-slate-500 font-bold focus:outline-none transition">
+                    </div>
+
+                    <!-- Kategorie z klimatem -->
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="selectCategory('😎 Osoba / Ekipa')" data-cat="😎 Osoba / Ekipa" class="cat-pill text-xs font-bold px-3 py-1.5 rounded-xl border-2 border-pink-500 bg-pink-600/20 text-pink-200 transition">
+                            😎 Osoba / Ekipa
+                        </button>
+                        <button type="button" onclick="selectCategory('🔥 TikTok / Gen-Z')" data-cat="🔥 TikTok / Gen-Z" class="cat-pill text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 hover:text-white transition">
+                            🔥 TikTok / Gen-Z
+                        </button>
+                        <button type="button" onclick="selectCategory('💀 Przypał / Akcja')" data-cat="💀 Przypał / Akcja" class="cat-pill text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 hover:text-white transition">
+                            💀 Przypał / Akcja
+                        </button>
+                        <button type="button" onclick="selectCategory('🍕 Rzecz / Klasyk')" data-cat="🍕 Rzecz / Klasyk" class="cat-pill text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 hover:text-white transition">
+                            🍕 Rzecz / Klasyk
+                        </button>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] text-white font-display font-bold text-lg shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>WRZUĆ DO WORKA POKOJU!</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Brak pomysłu? Dodaj 25 losowych haseł + Eksport/Import -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="bg-gradient-to-br from-pink-950/40 to-slate-900 border border-pink-500/30 rounded-2xl p-4 flex flex-col justify-between gap-3">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-extrabold text-white flex items-center gap-1.5">
+                                <i class="fa-solid fa-wand-magic-sparkles text-pink-400"></i> Nie macie pomysłu?
+                            </h3>
+                            <span class="text-[10px] bg-pink-500/20 text-pink-300 px-2 py-0.5 rounded-md font-bold">GOTOWIEC</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">Worek startuje pusty na Wasze hasła. Jeśli chcecie dolać gotowych trendów, kliknijcie poniżej!</p>
+                    </div>
+                    <button onclick="loadTikTokPack()" class="w-full py-2.5 px-3 rounded-xl bg-pink-600/20 hover:bg-pink-600/40 text-pink-200 text-xs font-bold border border-pink-500/40 transition">
+                        + Dodaj 25 losowych haseł (TikTok / Impreza)
+                    </button>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-extrabold text-white flex items-center gap-1.5">
+                            <i class="fa-solid fa-share-nodes text-indigo-400"></i> Kopia / Paczka na Discord
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1">Skopiuj wszystkie hasła jednym kodem lub wklej gotową listę słów od znajomego.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportWordsCode()" class="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition">
+                            Kopiuj paczkę
+                        </button>
+                        <button onclick="openImportModal()" class="flex-1 py-2.5 px-3 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-xs font-bold text-indigo-300 border border-indigo-500/30 transition">
+                            Wklej paczkę
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista haseł w pokoju (z informacją KTO DODAŁ, ale ukrytym tekstem hasła!) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 flex-1 flex flex-col">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+                    <div>
+                        <h3 class="font-display font-bold text-lg text-white">Worek Pokoju (<span id="list-total-count">0</span>)</h3>
+                        <p class="text-xs text-slate-400">Widzisz kto wrzucił hasło, ale treść jest ukryta przed rundą!</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleSpoilerMode()" id="spoiler-toggle-btn" class="text-xs font-bold px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-eye" id="spoiler-icon"></i>
+                            <span id="spoiler-btn-text">Podgląd (Spoiler)</span>
+                        </button>
+                        <button onclick="clearAllWords()" class="text-xs font-bold px-3 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 border border-rose-800/50 transition" title="Wyczyść wszystkie hasła">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="words-list-container" class="space-y-2 max-h-80 overflow-y-auto pr-1 no-scrollbar flex-1"></div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- ZAKŁADKA 3: RANKINGI I ODGADNIĘTE HASŁA    -->
+        <!-- ========================================== -->
+        <section id="view-ranking" class="hidden flex-1 flex flex-col gap-5">
+            
+            <!-- Podium / Klasyfikacja Graczy -->
+            <div class="bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-amber-400 block">TABELA WYNIKÓW NA ŻYWO</span>
+                        <h2 class="font-display text-2xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-trophy text-amber-400"></i>
+                            Kto Prowadzi w Ekipie?
+                        </h2>
+                    </div>
+                    <div class="text-xs font-bold text-slate-400 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
+                        Zwycięzca = Najwięcej Punktów ⭐
+                    </div>
+                </div>
+
+                <!-- Lista Rankingowa Graczy -->
+                <div id="leaderboard-players-list" class="space-y-2.5">
+                    <!-- Wypełniane dynamicznie -->
+                </div>
+            </div>
+
+            <!-- Historia / Ranking Odgadniętych i Spasowanych Haseł w Pokoju -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl flex-1 flex flex-col">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+                    <div>
+                        <h3 class="font-display font-bold text-xl text-white flex items-center gap-2">
+                            <i class="fa-solid fa-fire text-emerald-400"></i>
+                            Historia Odgadniętych Haseł (<span id="ranking-guessed-total">0</span>)
+                        </h3>
+                        <p class="text-xs text-slate-400">Sprawdź, kto zgadł jakie hasło i kto był jego autorem!</p>
+                    </div>
+                </div>
+
+                <div id="guessed-words-feed" class="space-y-2 max-h-96 overflow-y-auto pr-1 no-scrollbar flex-1">
+                    <!-- Wypełniane dynamicznie -->
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- ZAKŁADKA 4: PANEL ADMINISTRATORA / HOSTA   -->
+        <!-- ========================================== -->
+        <section id="view-admin" class="hidden flex-1 flex flex-col gap-5">
+            
+            <!-- Nagłówek Panelu Admina -->
+            <div class="bg-gradient-to-br from-slate-900 via-rose-950/30 to-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-rose-400 block">ZARZĄDZANIE SERWEREM / POKOJEM</span>
+                        <h2 class="font-display text-2xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-rose-400"></i>
+                            Panel Administratora (Hosta)
+                        </h2>
+                        <p id="admin-status-subtitle" class="text-xs text-slate-400 mt-0.5">
+                            Zarządzaj punktami graczy, resetuj ranking i kontroluj zasady pokoju na żywo.
+                        </p>
+                    </div>
+
+                    <!-- Przycisk odblokowania Admina (gdyby host odświeżył stronę lub wszedł z innego urządzenia) -->
+                    <button id="claim-host-btn" onclick="claimRoomHost()" class="hidden text-xs font-extrabold px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-md">
+                        <i class="fa-solid fa-crown mr-1"></i> Przejmij rolę Admina / Hosta
+                    </button>
+                </div>
+
+                <!-- Szybkie Akcje Administracyjne (Reset Rankingu, Reset Historii, Dostęp VIP) -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button onclick="adminResetAllScores()" class="admin-action-btn p-4 rounded-2xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-left transition flex flex-col justify-between gap-2 group">
+                        <div class="flex items-center justify-between">
+                            <span class="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center text-base">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </span>
+                            <span class="text-[10px] font-extrabold uppercase text-rose-300 bg-rose-500/20 px-2 py-0.5 rounded">WSZYSCY = 0 PKT</span>
+                        </div>
+                        <div>
+                            <div class="font-display font-bold text-sm text-white">Zresetuj cały Ranking</div>
+                            <div class="text-[11px] text-slate-400">Zeruje punkty oraz liczniki wszystkim graczom w pokoju.</div>
+                        </div>
+                    </button>
+
+                    <button onclick="adminClearGuessedHistory()" class="admin-action-btn p-4 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-left transition flex flex-col justify-between gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-base">
+                                <i class="fa-solid fa-broom"></i>
+                            </span>
+                            <span class="text-[10px] font-extrabold uppercase text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded">HISTORIA</span>
+                        </div>
+                        <div>
+                            <div class="font-display font-bold text-sm text-white">Wyczyść historię haseł</div>
+                            <div class="text-[11px] text-slate-400">Usuwa listę odgadniętych haseł i przywraca zużyte słowa.</div>
+                        </div>
+                    </button>
+
+                    <button onclick="openVipAccessModal()" class="admin-action-btn p-4 rounded-2xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-left transition flex flex-col justify-between gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-base">
+                                <i class="fa-solid fa-user-lock"></i>
+                            </span>
+                            <span class="text-[10px] font-extrabold uppercase text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded">AUTORYZACJA</span>
+                        </div>
+                        <div>
+                            <div class="font-display font-bold text-sm text-white">Lista VIP / Dostęp</div>
+                            <div class="text-[11px] text-slate-400">Wybierz kto może wejść do pokoju po loginie lub mailu.</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Zarządzanie Punktami Poszczególnych Graczy -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl flex-1 flex flex-col">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+                    <div>
+                        <h3 class="font-display font-bold text-xl text-white flex items-center gap-2">
+                            <i class="fa-solid fa-users-gear text-indigo-400"></i>
+                            Edycja Punktów Graczy na żywo
+                        </h3>
+                        <p class="text-xs text-slate-400">Dodawaj lub odejmuj punkty (+1 / -1), wyzeruj wybraną osobę lub usuń nieaktywnego gracza z pokoju.</p>
+                    </div>
+                </div>
+
+                <div id="admin-players-list" class="space-y-2.5">
+                    <!-- Dynamiczna lista graczy z przyciskami +1, -1, Reset 0, Usuń -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- ========================================================================= -->
+    <!-- PEŁNOEKRANOWY EKRAN 1: 3 SEKUNDY OSTRZEŻENIA "PRZYŁÓŻ DO CZOŁA"           -->
+    <!-- ========================================================================= -->
+    <div id="overlay-countdown" class="fixed inset-0 z-50 hidden bg-slate-950 flex-col items-center justify-center p-6 text-center no-select">
+        <div class="absolute w-96 h-96 bg-indigo-600/25 rounded-full blur-3xl animate-pulse"></div>
+        
+        <div class="relative z-10 max-w-md w-full flex flex-col items-center">
+            <div class="w-24 h-24 rounded-3xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300 text-5xl mb-5 animate-bounce shadow-xl shadow-amber-500/20">
+                <i class="fa-solid fa-mobile-screen-button transform -rotate-90"></i>
+            </div>
+
+            <span class="px-4 py-1.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 font-extrabold text-xs uppercase tracking-widest mb-3">
+                🚨 NIE PODGLĄDAJ EKRANU! 🚨
+            </span>
+
+            <h2 class="font-display font-bold text-3xl sm:text-5xl text-white mb-2 leading-tight">
+                PRZYŁÓŻ TELEFON DO CZOŁA!
+            </h2>
+            <p class="text-slate-300 text-sm sm:text-base mb-8">
+                Odwróć ekran w stronę ekipy! Hasło wjedzie za:
+            </p>
+
+            <div id="pre-countdown-number" class="w-40 h-40 sm:w-48 sm:h-48 rounded-[2.5rem] bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 border-4 border-white/30 flex items-center justify-center font-display font-bold text-8xl text-white shadow-2xl shadow-purple-500/50">
+                3
+            </div>
+
+            <button onclick="abortGame()" class="mt-10 text-slate-400 hover:text-white text-sm font-bold underline py-2 px-4">
+                Anuluj start
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- PEŁNOEKRANOWY EKRAN 2: EKRAN GRY NA CZOLE (PIONOWO I POZIOMO)             -->
+    <!-- ========================================================================= -->
+    <div id="overlay-active-game" class="fixed inset-0 z-50 hidden party-bg flex-col justify-between no-select overflow-hidden p-3 sm:p-6">
+        
+        <!-- GÓRNY PASEK Z PASKIEM POSTĘPU CZASU -->
+        <div class="relative z-20 flex flex-col gap-2">
+            <div class="flex items-center justify-between bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl px-4 py-2.5 shadow-lg">
+                
+                <!-- Kto gra + Kategoria + Autor hasła -->
+                <div class="flex items-center gap-2.5">
+                    <span id="active-word-category" class="px-3 py-1 rounded-xl bg-indigo-500/25 border border-indigo-400/40 text-indigo-200 font-extrabold text-xs sm:text-sm uppercase tracking-wider">
+                        🔥 TikTok / Gen-Z
+                    </span>
+                    <span id="active-word-author" class="text-xs text-slate-300 font-semibold hidden sm:inline bg-slate-800 px-2.5 py-1 rounded-lg">
+                        Od: Ekipa
+                    </span>
+                </div>
+
+                <!-- Tryb Bez Limitu Czasu -->
+                <div id="active-timer-box" class="flex items-center gap-2 px-4 py-1 rounded-xl bg-slate-950 border border-indigo-400/40 font-display font-bold text-lg sm:text-xl text-indigo-300 shadow-inner">
+                    <i class="fa-solid fa-infinity text-sm text-indigo-400"></i>
+                    <span id="active-timer-display">BEZ LIMITU</span>
+                </div>
+
+                <!-- Punktacja w rundzie + Fullscreen + Zakończ -->
+                <div class="flex items-center gap-2">
+                    <div class="px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-display font-bold text-base">
+                        ⭐ <span id="active-score-counter">0</span>
+                    </div>
+                    <button onclick="toggleFullScreen()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-indigo-900/60 text-indigo-300 flex items-center justify-center text-sm border border-slate-700" title="Pełny ekran">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button onclick="finishRound()" class="px-3 h-9 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-display font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md" title="Zakończ rundę">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                        <span>KONIEC</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ŚRODEK: EFEKTOWNA KARTA HASŁA -->
+        <div class="relative z-10 flex-1 flex items-center justify-center my-2 sm:my-4">
+            <div id="forehead-word-card" class="forehead-card w-full max-w-3xl min-h-[200px] sm:min-h-[260px] bg-gradient-to-br from-slate-900/95 via-indigo-950/90 to-slate-900/95 border-4 border-indigo-500/60 rounded-[2.5rem] p-6 sm:p-10 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                
+                <i class="fa-solid fa-quote-right absolute -right-4 -bottom-6 text-8xl text-white/5 pointer-events-none"></i>
+
+                <div id="active-word-author-mobile" class="text-[11px] font-bold uppercase tracking-widest text-indigo-300/80 mb-2">
+                    Wymyślił(a): Ekipa
+                </div>
+
+                <!-- GŁÓWNE HASŁO -->
+                <h1 id="active-word-text" class="font-display font-bold text-4xl sm:text-6xl md:text-7xl text-white uppercase tracking-wide drop-shadow-[0_5px_15px_rgba(0,0,0,0.8)] break-words leading-tight">
+                    SIGMA BOY
+                </h1>
+
+                <div id="active-remaining-pool" class="mt-4 text-xs font-bold text-slate-400 bg-slate-950/60 px-3 py-1 rounded-full border border-slate-800">
+                    Zostało dla Ciebie w puli: 15
+                </div>
+            </div>
+        </div>
+
+        <!-- DÓŁ EKRANU: DWA OGROMNE KAFLE AKCJI (Z DŹWIĘKAMI!) -->
+        <div id="active-action-buttons" class="relative z-20 grid grid-cols-2 gap-3 sm:gap-5 h-28 sm:h-36">
+            
+            <!-- LEWY KAFEL: PAS (-1 PUNKT) -->
+            <button id="btn-action-pass" onclick="handleWordAction('pass')" class="h-full w-full rounded-3xl bg-gradient-to-br from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 active:scale-95 transition-all border-b-8 border-rose-900 shadow-xl shadow-rose-900/40 flex flex-col items-center justify-center p-3 text-white group focus:outline-none disabled:opacity-50 disabled:pointer-events-none">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-black/20 flex items-center justify-center text-2xl sm:text-3xl">
+                        👎
+                    </div>
+                    <div class="text-left">
+                        <div class="font-display font-bold text-2xl sm:text-4xl leading-none tracking-wide">PAS!</div>
+                        <div class="text-[11px] sm:text-xs text-rose-200 font-extrabold mt-1">-1 Punkt (Pomiń)</div>
+                    </div>
+                </div>
+            </button>
+
+            <!-- PRAWY KAFEL: SIADŁO (+1 PUNKT) -->
+            <button id="btn-action-correct" onclick="handleWordAction('correct')" class="h-full w-full rounded-3xl bg-gradient-to-br from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 active:scale-95 transition-all border-b-8 border-emerald-800 shadow-xl shadow-emerald-900/40 flex flex-col items-center justify-center p-3 text-white group focus:outline-none disabled:opacity-50 disabled:pointer-events-none">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div class="text-right">
+                        <div class="font-display font-bold text-2xl sm:text-4xl leading-none tracking-wide">SIADŁO!</div>
+                        <div class="text-[11px] sm:text-xs text-emerald-100 font-extrabold mt-1">+1 Punkt (Zgadnięte)</div>
+                    </div>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-black/20 flex items-center justify-center text-2xl sm:text-3xl">
+                        🔥
+                    </div>
+                </div>
+            </button>
+
+        </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- PEŁNOEKRANOWY EKRAN 3: PODSUMOWANIE RUNDY                                 -->
+    <!-- ========================================================================= -->
+    <div id="overlay-summary" class="fixed inset-0 z-50 hidden bg-slate-950/95 backdrop-blur-md flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div class="bg-slate-900 border-2 border-slate-800 rounded-[2rem] p-6 sm:p-8 max-w-md w-full shadow-2xl my-auto relative">
+            
+            <!-- Przycisk X (Zamknij) w prawym górnym rogu -->
+            <button onclick="closeSummary()" class="absolute top-4 right-4 w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center border border-slate-700 transition" title="Zamknij podsumowanie">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="text-center mb-5">
+                <div class="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 text-3xl flex items-center justify-center mx-auto mb-3">
+                    🏆
+                </div>
+                <h2 class="font-display font-bold text-3xl text-white">Koniec Rundy!</h2>
+                <p id="summary-player-subtitle" class="text-indigo-300 text-sm font-bold mt-1">Bilans rundy dopisany do Twojego konta!</p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2.5 mb-6">
+                <div class="bg-emerald-950/50 border border-emerald-800/60 rounded-2xl p-3 text-center">
+                    <div id="summary-correct-count" class="font-display font-bold text-3xl text-emerald-400">+0</div>
+                    <div class="text-[10px] text-emerald-200/80 font-bold uppercase mt-1">Zgadnięte (+1)</div>
+                </div>
+                <div class="bg-rose-950/50 border border-rose-800/60 rounded-2xl p-3 text-center">
+                    <div id="summary-passed-count" class="font-display font-bold text-3xl text-rose-400">-0</div>
+                    <div class="text-[10px] text-rose-200/80 font-bold uppercase mt-1">Spasowane (-1)</div>
+                </div>
+                <div class="bg-indigo-950/50 border border-indigo-700/60 rounded-2xl p-3 text-center">
+                    <div id="summary-net-points" class="font-display font-bold text-3xl text-amber-300">0</div>
+                    <div class="text-[10px] text-indigo-200/80 font-bold uppercase mt-1">Bilans Pkt</div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2.5">Hasła z Twojej rundy:</h3>
+                <div id="summary-words-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 no-scrollbar"></div>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+                <div class="flex flex-col sm:flex-row gap-2.5">
+                    <button onclick="closeSummary(); switchTab('ranking');" class="flex-1 py-3.5 px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs sm:text-sm transition flex items-center justify-center gap-1.5 border border-slate-700">
+                        <i class="fa-solid fa-trophy"></i>
+                        <span>Zobacz Ranking</span>
+                    </button>
+                    <button onclick="closeSummary(); startPreGameCountdown();" class="flex-1 py-3.5 px-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Gram dalej!</span>
+                    </button>
+                </div>
+                <button onclick="closeSummary()" class="w-full py-3 px-4 rounded-2xl bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs sm:text-sm border border-slate-800 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-xmark"></i>
+                    <span>Zamknij (Wróć do pokoju)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- MODAL IMPORTU KODU Z HASŁAMI -->
+    <div id="modal-import" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <h3 class="font-display font-bold text-xl text-white mb-2">Wklej kod paczki lub listę haseł</h3>
+            <p class="text-xs text-slate-400 mb-4">Wklej skopiowany kod od znajomego albo wpisz hasła po przecinku.</p>
+            <textarea id="import-textarea" rows="4" placeholder="Wklej tutaj..." class="w-full bg-slate-950 border border-slate-700 rounded-2xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500 mb-4"></textarea>
+            <div class="flex gap-3">
+                <button onclick="closeImportModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-sm font-semibold">Anuluj</button>
+                <button onclick="confirmImportWords()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold">Dorzuć do worka</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AUTORYZACJI VIP (HOST MOŻE WPISAĆ MAILE/LOGINY DOPUSZCZONE DO GRY) -->
+    <div id="modal-vip-access" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-display font-bold text-xl text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-lock text-amber-400"></i> Dostęp VIP do Pokoju
+                </h3>
+                <button onclick="closeVipAccessModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-400">
+                Możesz zostawić pokój otwarty dla każdego z kodem albo wpisać listę <b>loginów / maili</b> kolegów, którzy mają prawo wejść do tego pokoju.
+            </p>
+            <label class="flex items-center gap-2.5 cursor-pointer bg-slate-950 p-3 rounded-xl border border-slate-800">
+                <input type="checkbox" id="vip-whitelist-toggle" class="w-4 h-4 rounded accent-amber-500">
+                <span class="text-xs font-bold text-amber-300">Wymagaj zatwierdzonego maila / loginu przy wejściu</span>
+            </label>
+            <div>
+                <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1">Dopuszczone maile lub loginy (po przecinku lub w nowej linii):</label>
+                <textarea id="vip-whitelist-textarea" rows="3" placeholder="np. antonio@szkola.pl, kacper123, michal..." class="w-full bg-slate-950 border border-slate-700 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-amber-400"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeVipAccessModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold">Zamknij</button>
+                <button onclick="saveVipAccessSettings()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold">Zapisz dla Pokoju</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- SILNIK GRY I PODWÓJNA SYNCHRONIZACJA LIVE (GitHub Pages MQTT + Firestore) -->
+    <!-- ========================================================================= -->
+    <script>
+        // --- AWATARY EMOJI DO WYBORU (Oprócz wgrywania własnego zdjęcia / GIF-a) ---
+        const AVATARS = ['😎', '🤠', '👽', '🐸', '🦊', '🐱', '🐶', '🐵', '👻', '🤖', '🦄', '🦖'];
+        const INACTIVE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minut nieaktywności usuwa gracza i czyści stare lobby
+
+        // --- PROFIL GRACZA ---
+        let myPlayer = {
+            id: 'p_' + Math.random().toString(36).substring(2, 9),
+            nick: '',
+            emailOrLogin: '',
+            avatar: '😎',
+            avatarImg: null,
+            score: 0,
+            guessedCount: 0,
+            passedCount: 0,
+            isPlayingNow: false,
+            lastSeen: Date.now()
+        };
+
+        let authMode = 'create'; // 'create' | 'join'
+        let currentRoomCode = '';
+        let currentRoomSessionId = ''; // Unikalny identyfikator sesji pokoju zapobiegający mieszaniu starych pokoi
+        let heartbeatTimer = null;
+
+        // --- WSPÓLNY STAN POKOJU ---
+        let wordsPool = [];
+        let usedWordIds = new Set();
+        let roomPlayers = {}; // { playerId: { ... } }
+        let roomGuessedFeed = []; // Historia odgadniętych i spasowanych haseł w pokoju
+        let roomHostId = ''; // ID Hosta / Administratora pokoju
+        let roomRules = {
+            blockOwnWords: true,
+            avoidRepeats: true
+        };
+        let roomSecurity = {
+            requireWhitelist: false,
+            allowedLogins: []
+        };
+
+        // --- STAN LOKALNY INTERFEJSU I RUNDY ---
+        let selectedCategory = '😎 Osoba / Ekipa';
+        let showSpoilers = false;
+        let gameDurationSeconds = 0; // Zawsze 0 = Bez limitu czasu
+        let preCountdownInterval = null;
+        let activeGameInterval = null;
+        let nextWordCountdownInterval = null;
+        let isWaitingForNextWord = false;
+        let currentRoundTimeLeft = 0;
+        let currentActiveWord = null;
+        let roundHistory = [];
+        let currentRoundNetPoints = 0;
+
+        // --- SPRAWDZENIE CZY JESTEM HOSTEM / ADMINEM POKOJU ---
+        function isRoomHost() {
+            return !roomHostId || roomHostId === myPlayer.id;
+        }
+
+        // --- NORMALIZACJA I DETERMINISTYCZNY KLUCZ HASŁA (ZERO DUPLIKATÓW NIGDY!) ---
+        function normalizeWordKey(str) {
+            return String(str || '')
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, ' ');
+        }
+
+        function makeWordIdFromText(str) {
+            const norm = normalizeWordKey(str);
+            return 'w_' + encodeURIComponent(norm).replace(/[^a-zA-Z0-9_-]/g, '_');
+        }
+
+        function deduplicateWordsPool() {
+            const seenKeys = new Set();
+            const cleanList = [];
+            for (const w of wordsPool) {
+                if (!w || !w.text) continue;
+                const key = normalizeWordKey(w.text);
+                if (!key) continue;
+                const canonicalId = makeWordIdFromText(w.text);
+                // Jeśli stara wersja zapisała losowe ID jako zużyte, przepisujemy je na kanoniczny klucz
+                if (w.id && usedWordIds.has(w.id)) {
+                    usedWordIds.add(canonicalId);
+                    usedWordIds.add(key);
+                }
+                w.id = canonicalId;
+                w.normKey = key;
+                if (!seenKeys.has(key)) {
+                    seenKeys.add(key);
+                    cleanList.push(w);
+                }
+            }
+            wordsPool = cleanList;
+        }
+
+        function isWordAlreadyUsedAnywhere(word) {
+            if (!word) return true;
+            const key = normalizeWordKey(word.text);
+            const canonicalId = makeWordIdFromText(word.text);
+            if (usedWordIds.has(word.id) || usedWordIds.has(canonicalId) || usedWordIds.has(key)) {
+                return true;
+            }
+            // Sprawdzenie w lokalnej historii rundy
+            if (roundHistory.some(r => normalizeWordKey(r.text) === key)) {
+                return true;
+            }
+            // Sprawdzenie w globalnej historii odgadniętych/spasowanych haseł pokoju
+            if (roomGuessedFeed.some(ev => normalizeWordKey(ev.wordText) === key)) {
+                return true;
+            }
+            return false;
+        }
+
+        function markWordAsUsedEverywhere(word) {
+            if (!word) return;
+            const key = normalizeWordKey(word.text);
+            const canonicalId = makeWordIdFromText(word.text);
+            if (word.id) usedWordIds.add(word.id);
+            usedWordIds.add(canonicalId);
+            if (key) usedWordIds.add(key);
+        }
+
+        // --- POMOCNICZE ESCAPOWANIE HTML ---
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // --- LOSOWANIE 5-ZNAKOWEGO KODU POKOJU ---
+        window.rollRandomRoomCode = function() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 5; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            const input = document.getElementById('create-room-code-input');
+            if (input) input.value = code;
+            return code;
+        };
+
+        // --- FUNKCJA PEŁNEGO EKRANU (FULL SCREEN NA TELEFONIE I PC) ---
+        window.toggleFullScreen = function() {
+            const docEl = document.documentElement;
+            const icon = document.getElementById('fullscreen-icon');
+            try {
+                if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                    if (docEl.requestFullscreen) {
+                        docEl.requestFullscreen();
+                    } else if (docEl.webkitRequestFullscreen) {
+                        docEl.webkitRequestFullscreen();
+                    }
+                    if (icon) icon.className = 'fa-solid fa-compress';
+                    showToast('Włączono tryb pełnoekranowy!', 'info');
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    }
+                    if (icon) icon.className = 'fa-solid fa-expand';
+                }
+            } catch (e) {
+                showToast('Twoja przeglądarka mobilna nie obsługuje pełnego ekranu w tym widoku.', 'info');
+            }
+        };
+
+        // --- SOCZYSTE DŹWIĘKI WEB AUDIO API + WIBRACJA TELEFONU ---
+        let audioCtx = null;
+        function playSound(type) {
+            try {
+                if (navigator.vibrate) {
+                    if (type === 'correct') navigator.vibrate([45, 30, 70]);
+                    else if (type === 'pass') navigator.vibrate(90);
+                    else if (type === 'start') navigator.vibrate(120);
+                }
+            } catch (e) {}
+
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const now = audioCtx.currentTime;
+
+                if (type === 'tick') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now); osc.stop(now + 0.12);
+                } else if (type === 'start') {
+                    [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                        gain.gain.setValueAtTime(0.32, now + idx * 0.06);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.25);
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.06); osc.stop(now + idx * 0.06 + 0.25);
+                    });
+                } else if (type === 'correct') {
+                    [587.33, 783.99, 987.77, 1174.66].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.055);
+                        gain.gain.setValueAtTime(0.35, now + idx * 0.055);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.055 + 0.22);
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.055); osc.stop(now + idx * 0.055 + 0.22);
+                    });
+                } else if (type === 'pass') {
+                    [280, 175].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.11);
+                        osc.frequency.linearRampToValueAtTime(freq - 45, now + idx * 0.11 + 0.14);
+                        gain.gain.setValueAtTime(0.28, now + idx * 0.11);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 0.16);
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.11); osc.stop(now + idx * 0.11 + 0.16);
+                    });
+                } else if (type === 'end') {
+                    [440, 392, 349.23, 261.63].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                        gain.gain.setValueAtTime(0.3, now + idx * 0.12);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.25);
+                        osc.connect(gain); gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.12); osc.stop(now + idx * 0.12 + 0.25);
+                    });
+                }
+            } catch (e) {}
+        }
+
+        // --- INICJALIZACJA EKRANU LOGOWANIA I AWATARÓW ---
+        function initLobbyScreen() {
+            const picker = document.getElementById('avatar-picker');
+            if (picker) {
+                picker.innerHTML = '';
+                AVATARS.forEach(emoji => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    const isSelected = !myPlayer.avatarImg && myPlayer.avatar === emoji;
+                    btn.className = `w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 transition ${
+                        isSelected
+                            ? 'bg-indigo-600 text-white border-2 border-white shadow-md scale-105'
+                            : 'bg-slate-950 hover:bg-slate-800 border border-slate-800'
+                    }`;
+                    btn.textContent = emoji;
+                    btn.onclick = () => selectAvatar(emoji);
+                    picker.appendChild(btn);
+                });
+            }
+
+            const createInput = document.getElementById('create-room-code-input');
+            if (createInput && !createInput.value) {
+                rollRandomRoomCode();
+            }
+            renderAuthAvatarPreview();
+        }
+
+        window.selectAvatar = function(emoji) {
+            myPlayer.avatar = emoji;
+            myPlayer.avatarImg = null;
+            renderAuthAvatarPreview();
+            initLobbyScreen();
+            if (currentRoomCode) broadcastRoomState();
+        };
+
+        // --- OBSŁUGA WŁASNEGO ZDJĘCIA ORAZ ANIMOWANEGO GIF-A JAKO AWATARA ---
+        window.handleCustomAvatarUpload = function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const isGif = file.type === 'image/gif' || /\.gif$/i.test(file.name || '');
+
+            if (isGif) {
+                if (file.size > 900 * 1024) {
+                    showToast('Ten GIF jest spory (>900KB) – mniejsze GIF-y szybciej przesyłają się znajomym!', 'warning');
+                }
+                const gifReader = new FileReader();
+                gifReader.onload = function(ev) {
+                    myPlayer.avatarImg = ev.target.result;
+                    renderAuthAvatarPreview();
+                    initLobbyScreen();
+                    if (currentRoomCode) broadcastRoomState();
+                    showToast('Animowany GIF został ustawiony jako Twoje profilowe!', 'success');
+                };
+                gifReader.readAsDataURL(file);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const size = 96;
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+
+                    const minDim = Math.min(img.width, img.height);
+                    const sx = (img.width - minDim) / 2;
+                    const sy = (img.height - minDim) / 2;
+                    ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+                    myPlayer.avatarImg = canvas.toDataURL('image/jpeg', 0.8);
+                    renderAuthAvatarPreview();
+                    initLobbyScreen();
+                    if (currentRoomCode) broadcastRoomState();
+                    showToast('Twoje zdjęcie zostało ustawione jako profilowe!', 'success');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        function renderAuthAvatarPreview() {
+            const boxes = [document.getElementById('auth-avatar-preview'), document.getElementById('step2-avatar-preview')];
+            boxes.forEach(box => {
+                if (!box) return;
+                if (myPlayer.avatarImg) {
+                    box.innerHTML = `<img src="${myPlayer.avatarImg}" alt="Avatar" class="w-full h-full object-cover">`;
+                } else {
+                    box.textContent = myPlayer.avatar || '😎';
+                }
+            });
+        }
+
+        function renderHeaderAvatar() {
+            const box = document.getElementById('header-player-avatar-box');
+            if (!box) return;
+            if (myPlayer.avatarImg) {
+                box.innerHTML = `<img src="${myPlayer.avatarImg}" alt="Avatar" class="w-full h-full object-cover">`;
+            } else {
+                box.innerHTML = `<span id="header-player-avatar" class="text-base sm:text-lg">${escapeHtml(myPlayer.avatar || '😎')}</span>`;
+            }
+        }
+
+        function renderPlayerAvatarBadge(player, sizeClass = 'w-9 h-9 text-xl') {
+            if (player.avatarImg) {
+                return `<div class="${sizeClass} rounded-xl overflow-hidden shrink-0 border border-white/20 shadow-sm"><img src="${player.avatarImg}" class="w-full h-full object-cover" alt=""></div>`;
+            }
+            return `<div class="${sizeClass} rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">${escapeHtml(player.avatar || '😎')}</div>`;
+        }
+
+        // --- KROK 1 -> KROK 2: PRZEJŚCIE Z LOGOWANIA DO WYBORU POKOJU ---
+        window.proceedToRoomStep = function() {
+            const inputEl = document.getElementById('player-nick-input');
+            const nickInput = inputEl ? inputEl.value.trim() : '';
+            if (!nickInput) {
+                showToast('Wpisz najpierw swoją nazwę (Nick)!', 'warning');
+                if (inputEl) inputEl.focus();
+                return;
+            }
+
+            myPlayer.nick = nickInput;
+            myPlayer.emailOrLogin = nickInput.toLowerCase();
+            myPlayer.lastSeen = Date.now();
+
+            renderAuthAvatarPreview();
+            const nickPreview = document.getElementById('step2-nick-preview');
+            if (nickPreview) nickPreview.textContent = myPlayer.nick;
+
+            const createInput = document.getElementById('create-room-code-input');
+            if (createInput && !createInput.value) {
+                rollRandomRoomCode();
+            }
+
+            document.getElementById('auth-step-1').classList.add('hidden');
+            document.getElementById('auth-step-2').classList.remove('hidden');
+            playSound('tick');
+        };
+
+        window.backToAccountStep = function() {
+            document.getElementById('auth-step-2').classList.add('hidden');
+            document.getElementById('auth-step-1').classList.remove('hidden');
+        };
+
+        window.setAuthMode = function(mode) {
+            authMode = mode;
+            const btnCreate = document.getElementById('mode-btn-create');
+            const btnJoin = document.getElementById('mode-btn-join');
+            const boxCreate = document.getElementById('auth-box-create');
+            const boxJoin = document.getElementById('auth-box-join');
+            const submitLabel = document.getElementById('step2-submit-label');
+
+            if (mode === 'create') {
+                btnCreate.className = 'py-3.5 px-3 rounded-2xl font-display font-bold text-sm border-2 border-indigo-500 bg-indigo-600/25 text-white flex flex-col items-center gap-1 transition shadow-md';
+                btnJoin.className = 'py-3.5 px-3 rounded-2xl font-display font-bold text-sm border-2 border-slate-800 bg-slate-950/70 text-slate-400 hover:text-white flex flex-col items-center gap-1 transition';
+                boxCreate.classList.remove('hidden');
+                boxJoin.classList.add('hidden');
+                if (submitLabel) submitLabel.textContent = 'STWÓRZ POKÓJ I GRAJ!';
+            } else {
+                btnJoin.className = 'py-3.5 px-3 rounded-2xl font-display font-bold text-sm border-2 border-emerald-500 bg-emerald-600/25 text-white flex flex-col items-center gap-1 transition shadow-md';
+                btnCreate.className = 'py-3.5 px-3 rounded-2xl font-display font-bold text-sm border-2 border-slate-800 bg-slate-950/70 text-slate-400 hover:text-white flex flex-col items-center gap-1 transition';
+                boxJoin.classList.remove('hidden');
+                boxCreate.classList.add('hidden');
+                if (submitLabel) submitLabel.textContent = 'DOŁĄCZ DO POKOJU!';
+                document.getElementById('join-room-code-input').focus();
+            }
+        };
+
+        // --- WEJŚCIE DO POKOJU W KROKU 2 (Z PEŁNĄ IZOLACJĄ POKOI I AUTO-CZYSZCZENIEM PO 5 MIN) ---
+        function resetLocalRoomMemory() {
+            wordsPool = [];
+            usedWordIds = new Set();
+            roomPlayers = {};
+            roomGuessedFeed = [];
+            roomHostId = '';
+            roomRules = { blockOwnWords: true, avoidRepeats: true };
+            roomSecurity = { requireWhitelist: false, allowedLogins: [] };
+            window._lastHostUpdatedAt = 0;
+            window._lastClearedAt = 0;
+            window._lastResetUsedAt = 0;
+            window._lastHistoryClearedAt = 0;
+            window._lastScoresResetAt = 0;
+            window._lastAdminActionAt = 0;
+        }
+
+        function pruneInactivePlayersAndLobby() {
+            const now = Date.now();
+            let removedAny = false;
+            Object.keys(roomPlayers).forEach(pid => {
+                if (pid === myPlayer.id) {
+                    roomPlayers[pid].lastSeen = now;
+                    return;
+                }
+                const p = roomPlayers[pid];
+                if (!p || !p.lastSeen || (now - p.lastSeen > INACTIVE_TIMEOUT_MS)) {
+                    delete roomPlayers[pid];
+                    removedAny = true;
+                }
+            });
+
+            if (roomHostId && !roomPlayers[roomHostId]) {
+                const remainingIds = Object.keys(roomPlayers);
+                roomHostId = remainingIds.length > 0 ? remainingIds[0] : myPlayer.id;
+            }
+
+            if (removedAny) {
+                updateUI();
+            }
+        }
+
+        window.enterPartyRoom = async function() {
+            if (!myPlayer.nick) {
+                const fallbackNick = document.getElementById('player-nick-input').value.trim();
+                if (!fallbackNick) {
+                    backToAccountStep();
+                    showToast('Wpisz najpierw swój Nick!', 'warning');
+                    return;
+                }
+                myPlayer.nick = fallbackNick;
+            }
+
+            let rawCode = authMode === 'create'
+                ? document.getElementById('create-room-code-input').value.trim()
+                : document.getElementById('join-room-code-input').value.trim();
+
+            rawCode = rawCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+
+            if (rawCode.length < 2) {
+                showToast('Kod pokoju musi mieć od 2 do 5 znaków!', 'warning');
+                return;
+            }
+
+            resetLocalRoomMemory();
+
+            myPlayer.id = 'p_' + Math.random().toString(36).substring(2, 9);
+            myPlayer.score = 0;
+            myPlayer.guessedCount = 0;
+            myPlayer.passedCount = 0;
+            myPlayer.isPlayingNow = false;
+            myPlayer.currentWordId = null;
+            myPlayer.lastSeen = Date.now();
+
+            currentRoomCode = rawCode;
+
+            if (authMode === 'create') {
+                roomHostId = myPlayer.id;
+                currentRoomSessionId = 'ses_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+                window._roomCreatedFreshAt = Date.now();
+            } else {
+                currentRoomSessionId = '';
+            }
+
+            myPlayer.isHost = (roomHostId === myPlayer.id);
+            roomPlayers[myPlayer.id] = { ...myPlayer };
+
+            renderHeaderAvatar();
+            document.getElementById('header-player-nick').textContent = myPlayer.nick;
+            document.getElementById('header-room-code').textContent = currentRoomCode;
+            document.getElementById('invite-code-inline').textContent = currentRoomCode;
+
+            document.getElementById('screen-lobby-auth').classList.add('hidden');
+
+            await connectLiveRoom(currentRoomCode, authMode === 'create');
+            startRoomHeartbeat();
+            updateUI();
+            showToast(`Wbiłeś do pokoju #${currentRoomCode} jako ${myPlayer.nick}!`, 'success');
+        };
+
+        window.leaveRoom = function() {
+            if (currentRoomCode && myPlayer.id) {
+                delete roomPlayers[myPlayer.id];
+                publishMqttPacket({
+                    type: 'PLAYER_LEFT',
+                    roomCode: currentRoomCode,
+                    playerId: myPlayer.id
+                });
+            }
+            if (roomUnsubscribe) {
+                try { roomUnsubscribe(); } catch (e) {}
+                roomUnsubscribe = null;
+            }
+            if (mqttClient) {
+                try { mqttClient.end(true); } catch (e) {}
+                mqttClient = null;
+            }
+            if (heartbeatTimer) {
+                clearInterval(heartbeatTimer);
+                heartbeatTimer = null;
+            }
+            currentRoomCode = '';
+            resetLocalRoomMemory();
+            document.getElementById('screen-lobby-auth').classList.remove('hidden');
+            document.getElementById('auth-step-1').classList.add('hidden');
+            document.getElementById('auth-step-2').classList.remove('hidden');
+            updateUI();
+        };
+
+        function startRoomHeartbeat() {
+            if (heartbeatTimer) clearInterval(heartbeatTimer);
+            heartbeatTimer = setInterval(() => {
+                if (!currentRoomCode) return;
+                myPlayer.lastSeen = Date.now();
+                if (roomPlayers[myPlayer.id]) {
+                    roomPlayers[myPlayer.id].lastSeen = myPlayer.lastSeen;
+                }
+                pruneInactivePlayersAndLobby();
+                broadcastRoomState();
+            }, 25000);
+        }
+
+        window.copyRoomInvite = function() {
+            const temp = document.createElement('textarea');
+            temp.value = currentRoomCode;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast(`Skopiowano kod pokoju: ${currentRoomCode}!`, 'info');
+        };
+
+        // --- AUTORYZACJA VIP (LISTA DOPUSZCZONYCH MAILI / LOGINÓW PRZEZ HOSTA) ---
+        window.openVipAccessModal = function() {
+            document.getElementById('vip-whitelist-toggle').checked = !!roomSecurity.requireWhitelist;
+            document.getElementById('vip-whitelist-textarea').value = (roomSecurity.allowedLogins || []).join(', ');
+            document.getElementById('modal-vip-access').classList.remove('hidden');
+            document.getElementById('modal-vip-access').classList.add('flex');
+        };
+
+        window.closeVipAccessModal = function() {
+            document.getElementById('modal-vip-access').classList.add('hidden');
+            document.getElementById('modal-vip-access').classList.remove('flex');
+        };
+
+        window.saveVipAccessSettings = function() {
+            const enabled = document.getElementById('vip-whitelist-toggle').checked;
+            const rawList = document.getElementById('vip-whitelist-textarea').value;
+            const parsed = rawList.split(/[\n,]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+
+            if (myPlayer.emailOrLogin && !parsed.includes(myPlayer.emailOrLogin.toLowerCase())) {
+                parsed.push(myPlayer.emailOrLogin.toLowerCase());
+            }
+            if (myPlayer.nick && !parsed.includes(myPlayer.nick.toLowerCase())) {
+                parsed.push(myPlayer.nick.toLowerCase());
+            }
+
+            roomSecurity = {
+                requireWhitelist: enabled,
+                allowedLogins: parsed
+            };
+
+            closeVipAccessModal();
+            broadcastRoomState();
+            showToast(enabled ? `Włączono listę VIP (${parsed.length} dopuszczonych osób)!` : 'Pokój jest otwarty dla każdego z kodem.', 'info');
+        };
+
+        // =========================================================================
+        // PODWÓJNA SYNCHRONIZACJA LIVE (MQTT WebSockets + Opcjonalny Firebase)
+        // =========================================================================
+        let mqttClient = null;
+        let currentMqttTopic = '';
+        let cloudDb = null;
+        let cloudUser = null;
+        let cloudFns = null;
+        let roomUnsubscribe = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'czolko-party-io';
+
+        async function initCloudEngine() {
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    const [{ initializeApp }, { getAuth, signInAnonymously, signInWithCustomToken }, { getFirestore, doc, setDoc, onSnapshot }] = await Promise.all([
+                        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js'),
+                        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js'),
+                        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js')
+                    ]);
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    const auth = getAuth(app);
+                    cloudDb = getFirestore(app);
+                    cloudFns = { doc, setDoc, onSnapshot };
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    cloudUser = auth.currentUser;
+                }
+            } catch (e) {
+                cloudDb = null;
+            }
+        }
+
+        async function connectLiveRoom(roomCode, isCreatingNewRoom = false) {
+            if (roomUnsubscribe) {
+                try { roomUnsubscribe(); } catch (e) {}
+                roomUnsubscribe = null;
+            }
+            if (mqttClient) {
+                try { mqttClient.end(true); } catch (e) {}
+                mqttClient = null;
+            }
+
+            if (cloudDb && cloudUser && cloudFns) {
+                const docId = `room_v11_${roomCode}`;
+                const roomRef = cloudFns.doc(cloudDb, 'artifacts', appId, 'public', 'data', 'czolko_rooms', docId);
+
+                if (isCreatingNewRoom) {
+                    await broadcastRoomState({ freshRoomAt: window._roomCreatedFreshAt || Date.now() });
+                }
+
+                roomUnsubscribe = cloudFns.onSnapshot(roomRef, (snapshot) => {
+                    if (roomCode !== currentRoomCode) return;
+                    if (snapshot.exists()) {
+                        mergeIncomingRoomState(snapshot.data());
+                    } else {
+                        broadcastRoomState();
+                    }
+                }, () => {});
+            }
+
+            try {
+                if (typeof mqtt !== 'undefined') {
+                    const topic = `czolko_io_pl_v11/room_${roomCode}`;
+                    currentMqttTopic = topic;
+
+                    mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+                        clientId: 'czolko11_' + myPlayer.id + '_' + Math.random().toString(16).slice(2, 6),
+                        clean: true,
+                        connectTimeout: 4000,
+                        reconnectPeriod: 2000,
+                    });
+
+                    mqttClient.on('connect', () => {
+                        if (roomCode !== currentRoomCode) return;
+                        setSyncBadge(true);
+                        mqttClient.subscribe(topic, { qos: 0 }, () => {
+                            if (!isCreatingNewRoom) {
+                                publishMqttPacket({ type: 'SYNC_REQUEST', roomCode: currentRoomCode, senderId: myPlayer.id });
+                            }
+                            broadcastRoomState();
+                        });
+                    });
+
+                    mqttClient.on('message', (t, payload) => {
+                        try {
+                            const msg = JSON.parse(payload.toString());
+                            if (msg.roomCode && msg.roomCode !== currentRoomCode) return;
+                            if (msg.type === 'PLAYER_LEFT' && msg.playerId) {
+                                delete roomPlayers[msg.playerId];
+                                updateUI();
+                                return;
+                            }
+                            if (msg.type === 'SYNC_REQUEST' && msg.senderId !== myPlayer.id) {
+                                broadcastRoomState();
+                            } else if (msg.type === 'ROOM_STATE') {
+                                mergeIncomingRoomState(msg.state);
+                            }
+                        } catch (err) {}
+                    });
+
+                    mqttClient.on('error', () => setSyncBadge(false));
+                }
+            } catch (e) {}
+        }
+
+        function setSyncBadge(online) {
+            const dot = document.getElementById('sync-dot');
+            if (!dot) return;
+            if (online) {
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+            } else {
+                dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+            }
+        }
+
+        function publishMqttPacket(packet) {
+            if (mqttClient && mqttClient.connected && currentMqttTopic) {
+                try {
+                    mqttClient.publish(currentMqttTopic, JSON.stringify(packet));
+                } catch (e) {}
+            }
+        }
+
+        function mergeIncomingRoomState(incoming) {
+            if (!incoming) return;
+            // Odrzucamy pakiety należące do innego kodu pokoju
+            if (incoming.roomCode && incoming.roomCode !== currentRoomCode) return;
+
+            const now = Date.now();
+
+            // Jeśli całe przychodzące lobby jest starsze niż 5 minut (300 000 ms), ignorujemy stare duchy i czyścimy lobby!
+            if (incoming.updatedAt && (now - incoming.updatedAt > INACTIVE_TIMEOUT_MS)) {
+                return;
+            }
+
+            // Jeśli Host utworzył świeżą sesję pokoju, resetujemy stan u osób w tym samym kodzie
+            if (incoming.freshRoomAt && incoming.freshRoomAt > (window._roomCreatedFreshAt || 0)) {
+                window._roomCreatedFreshAt = incoming.freshRoomAt;
+                currentRoomSessionId = incoming.sessionId || currentRoomSessionId;
+                wordsPool = Array.isArray(incoming.words) ? [...incoming.words] : [];
+                usedWordIds = new Set(Array.isArray(incoming.usedIds) ? incoming.usedIds : []);
+                roomGuessedFeed = [];
+                roomPlayers = { [myPlayer.id]: { ...myPlayer, lastSeen: now } };
+            }
+
+            if (incoming.hostId) {
+                if (!roomHostId || incoming.hostUpdatedAt > (window._lastHostUpdatedAt || 0)) {
+                    roomHostId = incoming.hostId;
+                    window._lastHostUpdatedAt = incoming.hostUpdatedAt || now;
+                }
+            }
+
+            if (incoming.rules && typeof incoming.rules === 'object') {
+                roomRules = {
+                    blockOwnWords: incoming.rules.blockOwnWords !== false,
+                    avoidRepeats: incoming.rules.avoidRepeats !== false
+                };
+                const blockOwnEl = document.getElementById('block-own-words-toggle');
+                const avoidRepeatsEl = document.getElementById('avoid-repeats-toggle');
+                if (blockOwnEl) blockOwnEl.checked = roomRules.blockOwnWords;
+                if (avoidRepeatsEl) avoidRepeatsEl.checked = roomRules.avoidRepeats;
+            }
+
+            if (incoming.security) {
+                roomSecurity = incoming.security;
+                if (roomSecurity.requireWhitelist && Array.isArray(roomSecurity.allowedLogins) && roomSecurity.allowedLogins.length > 0) {
+                    const myLogin = (myPlayer.emailOrLogin || '').toLowerCase();
+                    const myNick = (myPlayer.nick || '').toLowerCase();
+                    if (!roomSecurity.allowedLogins.includes(myLogin) && !roomSecurity.allowedLogins.includes(myNick)) {
+                        showToast('Ten pokój wymaga zatwierdzonego przez Hosta nicku/loginu!', 'error');
+                        leaveRoom();
+                        return;
+                    }
+                }
+            }
+
+            if (Array.isArray(incoming.words)) {
+                if (incoming.clearedAt && incoming.clearedAt > (window._lastClearedAt || 0)) {
+                    window._lastClearedAt = incoming.clearedAt;
+                    wordsPool = [...incoming.words];
+                } else {
+                    const existingKeys = new Set(wordsPool.map(w => normalizeWordKey(w.text)));
+                    incoming.words.forEach(w => {
+                        if (w && w.text) {
+                            const key = normalizeWordKey(w.text);
+                            if (key && !existingKeys.has(key)) {
+                                existingKeys.add(key);
+                                wordsPool.unshift({
+                                    ...w,
+                                    id: makeWordIdFromText(w.text),
+                                    normKey: key
+                                });
+                            }
+                        }
+                    });
+                }
+                deduplicateWordsPool();
+            }
+
+            if (Array.isArray(incoming.usedIds)) {
+                if (incoming.resetUsedAt && incoming.resetUsedAt > (window._lastResetUsedAt || 0)) {
+                    window._lastResetUsedAt = incoming.resetUsedAt;
+                    usedWordIds = new Set(incoming.usedIds);
+                } else {
+                    incoming.usedIds.forEach(id => usedWordIds.add(id));
+                }
+            }
+
+            if (Array.isArray(incoming.guessedFeed)) {
+                if (incoming.historyClearedAt && incoming.historyClearedAt > (window._lastHistoryClearedAt || 0)) {
+                    window._lastHistoryClearedAt = incoming.historyClearedAt;
+                    roomGuessedFeed = [...incoming.guessedFeed];
+                } else {
+                    const existingFeedMap = new Map(roomGuessedFeed.map(f => [f.eventId, f]));
+                    incoming.guessedFeed.forEach(item => {
+                        if (item && item.eventId && !existingFeedMap.has(item.eventId)) {
+                            roomGuessedFeed.unshift(item);
+                        }
+                        if (item && item.wordText) {
+                            usedWordIds.add(normalizeWordKey(item.wordText));
+                            usedWordIds.add(makeWordIdFromText(item.wordText));
+                        }
+                    });
+                    roomGuessedFeed.sort((a, b) => (b.time || 0) - (a.time || 0));
+                    roomGuessedFeed = roomGuessedFeed.slice(0, 80);
+                }
+            }
+
+            if (incoming.players && typeof incoming.players === 'object') {
+                if (incoming.scoresResetAt && incoming.scoresResetAt > (window._lastScoresResetAt || 0)) {
+                    window._lastScoresResetAt = incoming.scoresResetAt;
+                    myPlayer.score = 0;
+                    myPlayer.guessedCount = 0;
+                    myPlayer.passedCount = 0;
+                }
+
+                if (incoming.adminActionAt && incoming.adminActionAt > (window._lastAdminActionAt || 0)) {
+                    window._lastAdminActionAt = incoming.adminActionAt;
+                    roomPlayers = {};
+                    Object.values(incoming.players).forEach(p => {
+                        // Ignorujemy konta nieaktywne od ponad 5 minut
+                        if (p && p.id && p.lastSeen && (now - p.lastSeen <= INACTIVE_TIMEOUT_MS)) {
+                            roomPlayers[p.id] = p;
+                            if (p.id === myPlayer.id) {
+                                myPlayer.score = p.score || 0;
+                                myPlayer.guessedCount = p.guessedCount || 0;
+                                myPlayer.passedCount = p.passedCount || 0;
+                            }
+                        }
+                    });
+                    roomPlayers[myPlayer.id] = { ...myPlayer, lastSeen: now };
+                } else {
+                    Object.values(incoming.players).forEach(p => {
+                        if (!p || !p.id) return;
+                        // Ignorujemy stare konta nieaktywne powyżej 5 minut
+                        if (!p.lastSeen || (now - p.lastSeen > INACTIVE_TIMEOUT_MS)) {
+                            delete roomPlayers[p.id];
+                            return;
+                        }
+                        if (p.id === myPlayer.id) {
+                            roomPlayers[myPlayer.id] = { ...myPlayer, lastSeen: now };
+                        } else {
+                            // Usuwamy ewentualne stare duplikaty tego samego nicku ze starszym ID
+                            Object.keys(roomPlayers).forEach(existingId => {
+                                if (existingId !== p.id && existingId !== myPlayer.id) {
+                                    const ex = roomPlayers[existingId];
+                                    if (ex && ex.nick && p.nick && ex.nick.toLowerCase() === p.nick.toLowerCase()) {
+                                        if ((ex.lastSeen || 0) < (p.lastSeen || 0)) {
+                                            delete roomPlayers[existingId];
+                                        }
+                                    }
+                                }
+                            });
+                            roomPlayers[p.id] = p;
+                        }
+                    });
+                }
+            }
+
+            pruneInactivePlayersAndLobby();
+            updateUI();
+        }
+
+        async function broadcastRoomState(extraMeta = {}) {
+            if (!currentRoomCode) return;
+            if (!roomHostId) roomHostId = myPlayer.id;
+            myPlayer.lastSeen = Date.now();
+            myPlayer.isHost = (roomHostId === myPlayer.id);
+            roomPlayers[myPlayer.id] = { ...myPlayer };
+
+            pruneInactivePlayersAndLobby();
+
+            // Jeśli podczas trwania mojej rundy ktoś inny w tym samym ułamku sekundy wylosował lub odgadł to samo hasło,
+            // i ma wyższy priorytet ID, automatycznie przeskakujemy na inne wolne hasło, żeby nigdy nie było duplikatu!
+            if (myPlayer.isPlayingNow && currentActiveWord && !isWaitingForNextWord) {
+                const myKey = normalizeWordKey(currentActiveWord.text);
+                const conflictPlayer = Object.values(roomPlayers).find(p =>
+                    p && p.id !== myPlayer.id && p.isPlayingNow &&
+                    (p.currentWordKey === myKey || p.currentWordId === currentActiveWord.id) &&
+                    p.id < myPlayer.id
+                );
+                if (conflictPlayer) {
+                    pickNextRandomWord();
+                }
+            }
+
+            updateUI();
+        }
+
+        async function broadcastRoomState(extraMeta = {}) {
+            if (!currentRoomCode) return;
+            if (!roomHostId) roomHostId = myPlayer.id;
+            myPlayer.lastSeen = Date.now();
+            myPlayer.isHost = (roomHostId === myPlayer.id);
+            roomPlayers[myPlayer.id] = { ...myPlayer };
+
+            deduplicateWordsPool();
+            pruneInactivePlayersAndLobby();
+
+            const statePayload = {
+                roomCode: currentRoomCode,
+                sessionId: currentRoomSessionId,
+                hostId: roomHostId,
+                rules: roomRules,
+                words: wordsPool,
+                usedIds: Array.from(usedWordIds),
+                players: roomPlayers,
+                guessedFeed: roomGuessedFeed.slice(0, 60),
+                security: roomSecurity,
+                updatedAt: Date.now(),
+                ...extraMeta
+            };
+
+            publishMqttPacket({ type: 'ROOM_STATE', roomCode: currentRoomCode, state: statePayload });
+
+            if (cloudDb && cloudUser && cloudFns) {
+                try {
+                    const docId = `room_v11_${currentRoomCode}`;
+                    const roomRef = cloudFns.doc(cloudDb, 'artifacts', appId, 'public', 'data', 'czolko_rooms', docId);
+                    await cloudFns.setDoc(roomRef, statePayload);
+                } catch (e) {}
+            }
+        }
+
+        // --- ZAKŁADKI (4 PODSTRONY: GRAJ / BAZA HASEŁ / RANKINGI / ADMIN) ---
+        window.switchTab = function(tab) {
+            const viewPlay = document.getElementById('view-play');
+            const viewWords = document.getElementById('view-words');
+            const viewRanking = document.getElementById('view-ranking');
+            const viewAdmin = document.getElementById('view-admin');
+
+            const btnPlay = document.getElementById('tab-btn-play');
+            const btnWords = document.getElementById('tab-btn-words');
+            const btnRanking = document.getElementById('tab-btn-ranking');
+            const btnAdmin = document.getElementById('tab-btn-admin');
+
+            const activeBtn = 'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md';
+            const inactiveBtn = 'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white';
+
+            viewPlay.classList.toggle('hidden', tab !== 'play');
+            viewWords.classList.toggle('hidden', tab !== 'words');
+            viewRanking.classList.toggle('hidden', tab !== 'ranking');
+            if (viewAdmin) viewAdmin.classList.toggle('hidden', tab !== 'admin');
+
+            btnPlay.className = tab === 'play' ? activeBtn : inactiveBtn;
+            btnWords.className = tab === 'words' ? activeBtn : inactiveBtn;
+            btnRanking.className = tab === 'ranking' ? activeBtn : inactiveBtn;
+            if (btnAdmin) btnAdmin.className = tab === 'admin' ? activeBtn : inactiveBtn;
+
+            updateUI();
+        };
+
+        window.showToast = function(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const styles = {
+                success: 'bg-emerald-600 border-emerald-400 text-white',
+                warning: 'bg-amber-600 border-amber-400 text-white',
+                error: 'bg-rose-600 border-rose-400 text-white',
+                info: 'bg-indigo-600 border-indigo-400 text-white'
+            };
+            toast.className = `${styles[type] || styles.info} border-2 px-4 py-3 rounded-2xl shadow-2xl font-bold text-sm flex items-center justify-between gap-2 transition-all duration-300`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 2600);
+        };
+
+        // --- DODAWANIE HASEŁ (Z ZAPISANIEM ID AUTORA, ŻEBY SAM GO NIE WYLOSOWAŁ!) ---
+        window.selectCategory = function(cat) {
+            selectedCategory = cat;
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.className = 'cat-pill text-xs font-bold px-3 py-1.5 rounded-xl border-2 border-pink-500 bg-pink-600/20 text-pink-200 transition';
+                } else {
+                    btn.className = 'cat-pill text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 hover:text-white transition';
+                }
+            });
+        };
+
+        window.handleAddWord = function(e) {
+            e.preventDefault();
+            const input = document.getElementById('new-word-input');
+            const text = input.value.trim().replace(/\s+/g, ' ');
+            if (!text) return;
+
+            const normKey = normalizeWordKey(text);
+            const canonicalId = makeWordIdFromText(text);
+
+            if (wordsPool.some(w => normalizeWordKey(w.text) === normKey)) {
+                showToast(`Hasło „${text}” już jest w worku ekipy! Nie można dodać duplikatu.`, 'warning');
+                input.value = '';
+                return;
+            }
+
+            if (usedWordIds.has(normKey) || usedWordIds.has(canonicalId)) {
+                showToast(`Hasło „${text}” już było grane w tej sesji!`, 'warning');
+                input.value = '';
+                return;
+            }
+
+            const newEntry = {
+                id: canonicalId,
+                normKey: normKey,
+                text: text,
+                category: selectedCategory,
+                author: `${myPlayer.nick || 'Gracz'}`,
+                authorId: myPlayer.id,
+                authorNick: (myPlayer.nick || '').toLowerCase()
+            };
+
+            wordsPool.unshift(newEntry);
+            deduplicateWordsPool();
+            input.value = '';
+            updateUI();
+            broadcastRoomState();
+            showToast('Dodano! Ktoś z kolegów wylosuje to hasło (Ty go nie dostaniesz).', 'success');
+        };
+
+        window.loadTikTokPack = function() {
+            const tiktokWords = [
+                { text: 'Sigma Boy', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Skibidi Toilet', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Mewing (Pokazywanie szczęki)', category: '🔥 TikTok / Gen-Z' },
+                { text: '+10000 Aury', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Bambi', category: '😎 Osoba / Ekipa' },
+                { text: 'Książulo testujący kebaba', category: '😎 Osoba / Ekipa' },
+                { text: 'Rizzler (Podrywacz)', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Looksmaxxing', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Delulu (Życie w urojeniach)', category: '🔥 TikTok / Gen-Z' },
+                { text: 'NPC na transmisji Live', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Brat (Charli XCX)', category: '🔥 TikTok / Gen-Z' },
+                { text: 'IShowSpeed szczekający do kamery', category: '😎 Osoba / Ekipa' },
+                { text: 'Friz (Karol Wiśniewski)', category: '😎 Osoba / Ekipa' },
+                { text: 'Brainrot (Zgnilizna mózgu po scrollowaniu)', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Pani od matematyki: Dzwonek jest dla mnie!', category: '💀 Przypał / Akcja' },
+                { text: 'Bober (Gryzie!)', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Zestaw Mata w McDonaldzie', category: '🍕 Rzecz / Klasyk' },
+                { text: 'Robert Makłowicz', category: '😎 Osoba / Ekipa' },
+                { text: 'Spóźnienie na pierwszą lekcję z kebsem w ręku', category: '💀 Przypał / Akcja' },
+                { text: 'Pedro Pedro Pedro (Szop pracz w kółku)', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Chill guy (Wyluzowany piesek z mema)', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Impostor z Among Us', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Cringe (Żenada roku)', category: '🔥 TikTok / Gen-Z' },
+                { text: 'Pov: Budzisz się 5 minut przed lekcją', category: '💀 Przypał / Akcja' },
+                { text: 'Energetyk Monster Biały Zero', category: '🍕 Rzecz / Klasyk' }
+            ];
+
+            let added = 0;
+            tiktokWords.forEach(item => {
+                const normKey = normalizeWordKey(item.text);
+                if (!wordsPool.some(w => normalizeWordKey(w.text) === normKey)) {
+                    wordsPool.push({
+                        id: makeWordIdFromText(item.text),
+                        normKey: normKey,
+                        text: item.text,
+                        category: item.category,
+                        author: '🎲 Losowa Paczka',
+                        authorId: 'SYSTEM_PACK',
+                        authorNick: ''
+                    });
+                    added++;
+                }
+            });
+
+            deduplicateWordsPool();
+            updateUI();
+            broadcastRoomState();
+            showToast(`Dorzucono ${added} losowych haseł (każdy może je wylosować)!`, 'success');
+        };
+
+        window.removeWord = function(id) {
+            const target = wordsPool.find(w => w.id === id);
+            wordsPool = wordsPool.filter(w => w.id !== id);
+            usedWordIds.delete(id);
+            if (target && target.text) {
+                usedWordIds.delete(normalizeWordKey(target.text));
+                usedWordIds.delete(makeWordIdFromText(target.text));
+            }
+            updateUI();
+            broadcastRoomState();
+        };
+
+        window.clearAllWords = function() {
+            wordsPool = [];
+            usedWordIds.clear();
+            window._lastClearedAt = Date.now();
+            updateUI();
+            broadcastRoomState({ clearedAt: window._lastClearedAt });
+            showToast('Worek pokoju został wyczyszczony do zera!', 'warning');
+        };
+
+        window.toggleSpoilerMode = function() {
+            showSpoilers = !showSpoilers;
+            const icon = document.getElementById('spoiler-icon');
+            const text = document.getElementById('spoiler-btn-text');
+            if (showSpoilers) {
+                icon.className = 'fa-solid fa-eye-slash text-amber-400';
+                text.textContent = 'Ukryj hasła';
+            } else {
+                icon.className = 'fa-solid fa-eye';
+                text.textContent = 'Podgląd (Spoiler)';
+            }
+            updateUI();
+        };
+
+        // --- EKSPORT / IMPORT PACZKI ---
+        window.exportWordsCode = function() {
+            if (wordsPool.length === 0) {
+                showToast('Worek jest pusty!', 'warning');
+                return;
+            }
+            const payload = JSON.stringify(wordsPool.map(w => ({ t: w.text, c: w.category, a: w.author, aid: w.authorId, an: w.authorNick })));
+            const encoded = btoa(encodeURIComponent(payload));
+            const temp = document.createElement('textarea');
+            temp.value = encoded;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast('Skopiowano kod paczki haseł!', 'success');
+        };
+
+        window.openImportModal = function() {
+            document.getElementById('import-textarea').value = '';
+            document.getElementById('modal-import').classList.remove('hidden');
+            document.getElementById('modal-import').classList.add('flex');
+        };
+
+        window.closeImportModal = function() {
+            document.getElementById('modal-import').classList.add('hidden');
+            document.getElementById('modal-import').classList.remove('flex');
+        };
+
+        window.confirmImportWords = function() {
+            const raw = document.getElementById('import-textarea').value.trim();
+            if (!raw) return;
+            let imported = 0;
+            try {
+                const decoded = JSON.parse(decodeURIComponent(atob(raw)));
+                if (Array.isArray(decoded)) {
+                    decoded.forEach(item => {
+                        const normKey = normalizeWordKey(item.t);
+                        if (normKey && !wordsPool.some(w => normalizeWordKey(w.text) === normKey)) {
+                            wordsPool.push({
+                                id: makeWordIdFromText(item.t),
+                                normKey: normKey,
+                                text: item.t.trim(),
+                                category: item.c || '😎 Osoba / Ekipa',
+                                author: item.a || myPlayer.nick,
+                                authorId: item.aid || 'IMPORTED',
+                                authorNick: item.an || ''
+                            });
+                            imported++;
+                        }
+                    });
+                }
+            } catch (e) {
+                const parts = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+                parts.forEach(p => {
+                    const normKey = normalizeWordKey(p);
+                    if (normKey && !wordsPool.some(w => normalizeWordKey(w.text) === normKey)) {
+                        wordsPool.push({
+                            id: makeWordIdFromText(p),
+                            normKey: normKey,
+                            text: p,
+                            category: '😎 Osoba / Ekipa',
+                            author: myPlayer.nick || 'Import',
+                            authorId: 'IMPORTED',
+                            authorNick: ''
+                        });
+                        imported++;
+                    }
+                });
+            }
+
+            deduplicateWordsPool();
+            closeImportModal();
+            updateUI();
+            broadcastRoomState();
+            showToast(`Zaimportowano ${imported} nowych haseł!`, 'success');
+        };
+
+        // --- SYNCHRONIZACJA ZASAD POKOJU PRZEZ HOSTA ORAZ FUNKCJE ADMINISTRATORA ---
+        window.handleHostRuleChange = function() {
+            const blockOwnEl = document.getElementById('block-own-words-toggle');
+            const avoidRepeatsEl = document.getElementById('avoid-repeats-toggle');
+
+            if (!isRoomHost()) {
+                if (blockOwnEl) blockOwnEl.checked = roomRules.blockOwnWords;
+                if (avoidRepeatsEl) avoidRepeatsEl.checked = roomRules.avoidRepeats;
+                showToast('Tylko Host (Administrator pokoju) może zmieniać zasady gry!', 'warning');
+                return;
+            }
+
+            roomRules = {
+                blockOwnWords: blockOwnEl ? blockOwnEl.checked : true,
+                avoidRepeats: avoidRepeatsEl ? avoidRepeatsEl.checked : true
+            };
+
+            updateUI();
+            broadcastRoomState();
+            showToast('Zasady pokoju zostały zaktualizowane u wszystkich graczy!', 'info');
+        };
+
+        window.claimRoomHost = function() {
+            roomHostId = myPlayer.id;
+            window._lastHostUpdatedAt = Date.now();
+            updateUI();
+            broadcastRoomState({ hostUpdatedAt: window._lastHostUpdatedAt });
+            showToast('Przejąłeś uprawnienia Hosta / Administratora pokoju!', 'success');
+        };
+
+        window.adminAdjustPlayerScore = function(playerId, delta) {
+            if (!isRoomHost()) {
+                showToast('Tylko Host / Administrator może edytować punkty! Kliknij "Przejmij rolę Admina".', 'warning');
+                return;
+            }
+            const target = roomPlayers[playerId];
+            if (!target) return;
+
+            target.score = (target.score || 0) + delta;
+            if (playerId === myPlayer.id) {
+                myPlayer.score = target.score;
+            }
+
+            window._lastAdminActionAt = Date.now();
+            updateUI();
+            broadcastRoomState({ adminActionAt: window._lastAdminActionAt });
+            showToast(`Zmieniono punkty gracza ${target.nick}: ${delta > 0 ? '+' + delta : delta} pkt`, 'info');
+        };
+
+        window.adminResetSinglePlayerScore = function(playerId) {
+            if (!isRoomHost()) {
+                showToast('Tylko Host / Administrator może zerować punkty!', 'warning');
+                return;
+            }
+            const target = roomPlayers[playerId];
+            if (!target) return;
+
+            target.score = 0;
+            target.guessedCount = 0;
+            target.passedCount = 0;
+            if (playerId === myPlayer.id) {
+                myPlayer.score = 0;
+                myPlayer.guessedCount = 0;
+                myPlayer.passedCount = 0;
+            }
+
+            window._lastAdminActionAt = Date.now();
+            updateUI();
+            broadcastRoomState({ adminActionAt: window._lastAdminActionAt });
+            showToast(`Wyzerowano punkty gracza ${target.nick}!`, 'info');
+        };
+
+        window.adminRemovePlayer = function(playerId) {
+            if (!isRoomHost()) {
+                showToast('Tylko Host / Administrator może usuwać graczy z listy!', 'warning');
+                return;
+            }
+            if (playerId === myPlayer.id) {
+                showToast('Nie możesz usunąć samego siebie!', 'warning');
+                return;
+            }
+            const targetNick = roomPlayers[playerId]?.nick || 'Gracz';
+            delete roomPlayers[playerId];
+
+            window._lastAdminActionAt = Date.now();
+            updateUI();
+            broadcastRoomState({ adminActionAt: window._lastAdminActionAt });
+            showToast(`Usunięto gracza ${targetNick} z listy pokoju.`, 'warning');
+        };
+
+        window.adminResetAllScores = function() {
+            if (!isRoomHost()) {
+                showToast('Tylko Host / Administrator może zresetować cały ranking!', 'warning');
+                return;
+            }
+            Object.values(roomPlayers).forEach(p => {
+                p.score = 0;
+                p.guessedCount = 0;
+                p.passedCount = 0;
+            });
+            myPlayer.score = 0;
+            myPlayer.guessedCount = 0;
+            myPlayer.passedCount = 0;
+
+            window._lastScoresResetAt = Date.now();
+            window._lastAdminActionAt = Date.now();
+            updateUI();
+            broadcastRoomState({
+                scoresResetAt: window._lastScoresResetAt,
+                adminActionAt: window._lastAdminActionAt
+            });
+            showToast('Ranking wszystkich graczy został zresetowany do 0 pkt!', 'success');
+        };
+
+        window.adminClearGuessedHistory = function() {
+            if (!isRoomHost()) {
+                showToast('Tylko Host / Administrator może wyczyścić historię haseł!', 'warning');
+                return;
+            }
+            roomGuessedFeed = [];
+            usedWordIds.clear();
+            window._lastHistoryClearedAt = Date.now();
+            window._lastResetUsedAt = Date.now();
+            updateUI();
+            broadcastRoomState({
+                historyClearedAt: window._lastHistoryClearedAt,
+                resetUsedAt: window._lastResetUsedAt
+            });
+            showToast('Wyczyszczono historię odgadniętych haseł i przywrócono słowa do puli!', 'success');
+        };
+
+        window.resetUsedWords = function() {
+            if (!isRoomHost()) {
+                showToast('Tylko Host pokoju może przywrócić zużyte hasła dla wszystkich!', 'warning');
+                return;
+            }
+            usedWordIds.clear();
+            window._lastResetUsedAt = Date.now();
+            updateUI();
+            broadcastRoomState({ resetUsedAt: window._lastResetUsedAt });
+            showToast('Wszystkie zużyte hasła wróciły do gry!', 'info');
+        };
+
+        function isWordCreatedByMe(word) {
+            if (!word) return false;
+            if (word.authorId && word.authorId === myPlayer.id) return true;
+            if (word.authorNick && myPlayer.nick && word.authorNick === myPlayer.nick.toLowerCase()) return true;
+            return false;
+        }
+
+        function getAvailableWordsForMe() {
+            deduplicateWordsPool();
+            const blockOwn = roomRules.blockOwnWords !== false;
+            const seenInFilter = new Set();
+
+            return wordsPool.filter(w => {
+                if (!w || !w.text) return false;
+                const key = normalizeWordKey(w.text);
+                if (!key || seenInFilter.has(key)) return false;
+
+                // 1. Każde wylosowane lub zagrane raz hasło (po ID lub po tekście) odpada na stałe
+                if (isWordAlreadyUsedAnywhere(w)) return false;
+
+                // 2. Jeśli włączona blokada własnych haseł, autor nie może wylosować swojego
+                if (blockOwn && isWordCreatedByMe(w)) return false;
+
+                // 3. Ochrona przed hasłem, które inny gracz trzyma w tej sekundzie na czole (po ID lub po tekście)
+                const isCurrentlyOnSomeoneElseForehead = Object.values(roomPlayers).some(
+                    p => p && p.id !== myPlayer.id && p.isPlayingNow &&
+                    (p.currentWordId === w.id || p.currentWordKey === key)
+                );
+                if (isCurrentlyOnSomeoneElseForehead) return false;
+
+                seenInFilter.add(key);
+                return true;
+            });
+        }
+
+        window.startPreGameCountdown = function() {
+            if (wordsPool.length === 0) {
+                showToast('Worek jest pusty! Niech koledzy dodadzą hasła albo kliknij "+25 losowych haseł".', 'error');
+                switchTab('words');
+                return;
+            }
+
+            let available = getAvailableWordsForMe();
+            if (available.length === 0) {
+                const blockOwn = roomRules.blockOwnWords !== false;
+                const unusedWords = wordsPool.filter(w => !isWordAlreadyUsedAnywhere(w));
+                const nonOwnUnused = unusedWords.filter(w => !blockOwn || !isWordCreatedByMe(w));
+
+                if (unusedWords.length === 0) {
+                    showToast('Wszystkie hasła z worka zostały już wykorzystane! Dopiszcie nowe albo niech Host kliknie "Przywróć zużyte hasła".', 'warning');
+                    switchTab('words');
+                    return;
+                }
+
+                if (nonOwnUnused.length === 0) {
+                    showToast('W puli zostały już TYLKO Twoje własne hasła! Niech teraz telefon weźmie inny gracz albo dopiszcie nowe hasła.', 'warning');
+                    switchTab('words');
+                    return;
+                }
+
+                showToast('Brak dostępnych dla Ciebie haseł w worku!', 'warning');
+                return;
+            }
+
+            myPlayer.isPlayingNow = true;
+            broadcastRoomState();
+
+            const overlay = document.getElementById('overlay-countdown');
+            const numDisplay = document.getElementById('pre-countdown-number');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+
+            let count = 3;
+            numDisplay.textContent = count;
+            playSound('tick');
+
+            if (preCountdownInterval) clearInterval(preCountdownInterval);
+            preCountdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    numDisplay.textContent = count;
+                    playSound('tick');
+                } else {
+                    clearInterval(preCountdownInterval);
+                    overlay.classList.add('hidden');
+                    overlay.classList.remove('flex');
+                    launchActiveRound();
+                }
+            }, 1000);
+        };
+
+        window.abortGame = function() {
+            if (preCountdownInterval) clearInterval(preCountdownInterval);
+            if (activeGameInterval) clearInterval(activeGameInterval);
+            if (nextWordCountdownInterval) clearInterval(nextWordCountdownInterval);
+            isWaitingForNextWord = false;
+            myPlayer.isPlayingNow = false;
+            myPlayer.currentWordId = null;
+            myPlayer.currentWordKey = null;
+            broadcastRoomState();
+            document.getElementById('overlay-countdown').classList.add('hidden');
+            document.getElementById('overlay-countdown').classList.remove('flex');
+            document.getElementById('overlay-active-game').classList.add('hidden');
+            document.getElementById('overlay-active-game').classList.remove('flex');
+            updateUI();
+        };
+
+        function setActionButtonsDisabled(disabled) {
+            const btnPass = document.getElementById('btn-action-pass');
+            const btnCorrect = document.getElementById('btn-action-correct');
+            if (btnPass) btnPass.disabled = disabled;
+            if (btnCorrect) btnCorrect.disabled = disabled;
+        }
+
+        function launchActiveRound() {
+            roundHistory = [];
+            currentRoundNetPoints = 0;
+            isWaitingForNextWord = false;
+            setActionButtonsDisabled(false);
+            playSound('start');
+
+            const gameOverlay = document.getElementById('overlay-active-game');
+            gameOverlay.classList.remove('hidden');
+            gameOverlay.classList.add('flex');
+
+            document.getElementById('active-score-counter').textContent = '0';
+
+            if (activeGameInterval) clearInterval(activeGameInterval);
+            if (nextWordCountdownInterval) clearInterval(nextWordCountdownInterval);
+
+            pickNextRandomWord();
+        }
+
+        function pickNextRandomWord() {
+            const available = getAvailableWordsForMe();
+            if (available.length === 0) {
+                playSound('end');
+                showToast('Koniec dostępnych haseł w worku!', 'info');
+                finishRound();
+                return;
+            }
+
+            const randomIndex = Math.floor(Math.random() * available.length);
+            currentActiveWord = available[randomIndex];
+
+            // Natychmiast rezerwujemy hasło globalnie po ID oraz po znormalizowanym tekście (np. "burzyn"),
+            // dzięki czemu żaden gracz nigdy nie dostanie tego samego hasła po raz drugi!
+            markWordAsUsedEverywhere(currentActiveWord);
+            myPlayer.currentWordId = currentActiveWord.id;
+            myPlayer.currentWordKey = normalizeWordKey(currentActiveWord.text);
+            broadcastRoomState();
+
+            isWaitingForNextWord = false;
+            setActionButtonsDisabled(false);
+
+            document.getElementById('active-word-text').textContent = currentActiveWord.text;
+            document.getElementById('active-word-category').textContent = currentActiveWord.category || '😎 Osoba / Ekipa';
+            document.getElementById('active-word-author').textContent = `Od: ${currentActiveWord.author || 'Ekipa'}`;
+            document.getElementById('active-word-author-mobile').textContent = `Wymyślił(a): ${currentActiveWord.author || 'Ekipa'}`;
+            document.getElementById('active-remaining-pool').textContent = `Zostało dla Ciebie w puli: ${Math.max(0, available.length - 1)}`;
+        }
+
+        // PUNKTACJA: +1 za Zgadnięte (correct), -1 za PAS (pass) + 3 sekundy odliczania przed kolejnym hasłem
+        window.handleWordAction = function(actionType) {
+            if (!currentActiveWord || isWaitingForNextWord) return;
+
+            isWaitingForNextWord = true;
+            setActionButtonsDisabled(true);
+
+            const card = document.getElementById('forehead-word-card');
+
+            roundHistory.push({
+                text: currentActiveWord.text,
+                category: currentActiveWord.category,
+                author: currentActiveWord.author,
+                status: actionType
+            });
+            markWordAsUsedEverywhere(currentActiveWord);
+
+            if (actionType === 'correct') {
+                playSound('correct');
+                myPlayer.score = (myPlayer.score || 0) + 1;
+                myPlayer.guessedCount = (myPlayer.guessedCount || 0) + 1;
+                currentRoundNetPoints += 1;
+                card.classList.add('flash-correct');
+            } else {
+                playSound('pass');
+                myPlayer.score = (myPlayer.score || 0) - 1;
+                myPlayer.passedCount = (myPlayer.passedCount || 0) + 1;
+                currentRoundNetPoints -= 1;
+                card.classList.add('flash-pass');
+            }
+
+            roomGuessedFeed.unshift({
+                eventId: 'ev_v11_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+                wordText: currentActiveWord.text,
+                category: currentActiveWord.category,
+                wordAuthor: currentActiveWord.author || 'Ekipa',
+                guesserNick: myPlayer.nick || 'Gracz',
+                guesserAvatar: myPlayer.avatar || '😎',
+                status: actionType,
+                time: Date.now()
+            });
+
+            const sign = currentRoundNetPoints > 0 ? `+${currentRoundNetPoints}` : `${currentRoundNetPoints}`;
+            document.getElementById('active-score-counter').textContent = sign;
+
+            broadcastRoomState();
+
+            setTimeout(() => {
+                card.classList.remove('flash-correct', 'flash-pass');
+            }, 260);
+
+            // Sprawdzamy, czy zostały jeszcze jakieś unikalne hasła dla tego gracza w puli pokoju
+            const remainingAvailable = getAvailableWordsForMe();
+            if (remainingAvailable.length === 0) {
+                setTimeout(() => {
+                    playSound('end');
+                    showToast('Wszystkie unikalne hasła z worka zostały zużyte!', 'info');
+                    finishRound();
+                }, 500);
+                return;
+            }
+
+            // 3-sekundowe odliczanie przed pojawieniem się kolejnego unikalnego hasła
+            let nextSec = 3;
+            const statusLabel = actionType === 'correct' ? '🔥 SIADŁO! (+1 PKT)' : '👎 PAS! (-1 PKT)';
+            document.getElementById('active-word-author-mobile').textContent = `${statusLabel} • Kolejne hasło za:`;
+            document.getElementById('active-word-text').textContent = `⏳ ${nextSec}...`;
+
+            if (nextWordCountdownInterval) clearInterval(nextWordCountdownInterval);
+            nextWordCountdownInterval = setInterval(() => {
+                nextSec--;
+                if (nextSec > 0) {
+                    playSound('tick');
+                    document.getElementById('active-word-text').textContent = `⏳ ${nextSec}...`;
+                } else {
+                    clearInterval(nextWordCountdownInterval);
+                    playSound('start');
+                    pickNextRandomWord();
+                }
+            }, 1000);
+        };
+
+        window.finishRound = function() {
+            if (activeGameInterval) clearInterval(activeGameInterval);
+            if (nextWordCountdownInterval) clearInterval(nextWordCountdownInterval);
+            isWaitingForNextWord = false;
+            setActionButtonsDisabled(false);
+            myPlayer.isPlayingNow = false;
+            myPlayer.currentWordId = null;
+            myPlayer.currentWordKey = null;
+            currentActiveWord = null;
+
+            document.getElementById('overlay-active-game').classList.add('hidden');
+            document.getElementById('overlay-active-game').classList.remove('flex');
+
+            const correctCount = roundHistory.filter(r => r.status === 'correct').length;
+            const passedCount = roundHistory.filter(r => r.status === 'pass').length;
+
+            document.getElementById('summary-correct-count').textContent = `+${correctCount}`;
+            document.getElementById('summary-passed-count').textContent = `-${passedCount}`;
+            document.getElementById('summary-net-points').textContent = currentRoundNetPoints > 0 ? `+${currentRoundNetPoints}` : `${currentRoundNetPoints}`;
+
+            const listEl = document.getElementById('summary-words-list');
+            listEl.innerHTML = '';
+
+            if (roundHistory.length === 0) {
+                listEl.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">Nie rozstrzygnięto żadnego hasła w tej rundzie.</div>`;
+            } else {
+                roundHistory.forEach(item => {
+                    const isOk = item.status === 'correct';
+                    const row = document.createElement('div');
+                    row.className = `flex items-center justify-between p-2.5 rounded-xl border ${
+                        isOk ? 'bg-emerald-950/30 border-emerald-800/50' : 'bg-rose-950/30 border-rose-800/50'
+                    }`;
+                    row.innerHTML = `
+                        <div class="truncate pr-2">
+                            <div class="text-xs font-bold text-white truncate">${escapeHtml(item.text)}</div>
+                            <div class="text-[10px] text-slate-400">Od: ${escapeHtml(item.author || 'Ekipa')}</div>
+                        </div>
+                        <span class="text-xs font-extrabold ${isOk ? 'text-emerald-400' : 'text-rose-400'} shrink-0">
+                            ${isOk ? '+1 pkt 🔥' : '-1 pkt 👎'}
+                        </span>
+                    `;
+                    listEl.appendChild(row);
+                });
+            }
+
+            document.getElementById('overlay-summary').classList.remove('hidden');
+            document.getElementById('overlay-summary').classList.add('flex');
+
+            broadcastRoomState();
+            updateUI();
+        };
+
+        window.closeSummary = function() {
+            document.getElementById('overlay-summary').classList.add('hidden');
+            document.getElementById('overlay-summary').classList.remove('flex');
+            updateUI();
+        };
+
+        // --- RENDEROWANIE LISTY GRACZY, WORKA HASEŁ ORAZ PODSTRONY RANKINGÓW ---
+        function updateUI() {
+            deduplicateWordsPool();
+            const total = wordsPool.length;
+            const availableForMe = getAvailableWordsForMe().length;
+            const used = wordsPool.filter(w => isWordAlreadyUsedAnywhere(w)).length;
+            const guessedEvents = roomGuessedFeed.filter(e => e.status === 'correct');
+
+            document.getElementById('nav-word-count').textContent = total;
+            document.getElementById('nav-guessed-count').textContent = guessedEvents.length;
+            document.getElementById('ranking-guessed-total').textContent = guessedEvents.length;
+            document.getElementById('list-total-count').textContent = total;
+            document.getElementById('stat-available-words').textContent = availableForMe;
+            document.getElementById('stat-total-room-words').textContent = total;
+            document.getElementById('stat-used-words').textContent = used;
+
+            // Synchronizacja przełączników zasad Hosta
+            const amHost = isRoomHost();
+            const blockOwnEl = document.getElementById('block-own-words-toggle');
+            const avoidRepeatsEl = document.getElementById('avoid-repeats-toggle');
+            if (blockOwnEl) {
+                blockOwnEl.checked = roomRules.blockOwnWords !== false;
+                blockOwnEl.disabled = !amHost;
+            }
+            if (avoidRepeatsEl) {
+                avoidRepeatsEl.checked = roomRules.avoidRepeats !== false;
+                avoidRepeatsEl.disabled = !amHost;
+            }
+
+            const hostNick = (roomPlayers[roomHostId] && roomPlayers[roomHostId].nick) ? roomPlayers[roomHostId].nick : (amHost ? myPlayer.nick : 'Host');
+            const hostLabel = document.getElementById('room-rules-host-label');
+            if (hostLabel) {
+                hostLabel.innerHTML = amHost
+                    ? '👑 Jesteś <b>Hostem (Adminem)</b> – wybrane przez Ciebie zasady obowiązują wszystkich!'
+                    : `👑 Zasady pokoju ustala Host (<b>${escapeHtml(hostNick)}</b>) – każdy może dodawać hasła!`;
+            }
+
+            const claimBtn = document.getElementById('claim-host-btn');
+            if (claimBtn) {
+                claimBtn.classList.toggle('hidden', amHost);
+            }
+
+            // Renderowanie Ekipy w Lobby + Licznik LIVE
+            const playersArr = Object.values(roomPlayers).sort((a, b) => (b.score || 0) - (a.score || 0));
+            const onlineCount = Math.max(1, playersArr.length);
+            document.getElementById('players-online-count').textContent = `${onlineCount} online`;
+            document.getElementById('header-live-count').textContent = onlineCount;
+            const globalCounter = document.getElementById('global-live-counter');
+            if (globalCounter) globalCounter.textContent = onlineCount;
+
+            const rosterGrid = document.getElementById('players-roster-grid');
+            rosterGrid.innerHTML = '';
+
+            let someoneElsePlaying = null;
+
+            playersArr.forEach((p, idx) => {
+                if (p.isPlayingNow && p.id !== myPlayer.id) {
+                    someoneElsePlaying = p;
+                }
+                const isMe = p.id === myPlayer.id;
+                const isThisHost = p.id === roomHostId;
+                const scoreVal = p.score || 0;
+                const scoreColor = scoreVal > 0 ? 'text-emerald-400' : scoreVal < 0 ? 'text-rose-400' : 'text-slate-400';
+
+                const card = document.createElement('div');
+                card.className = `flex items-center justify-between p-2.5 rounded-2xl border transition ${
+                    p.isPlayingNow
+                        ? 'bg-amber-500/15 border-amber-400 shadow-lg shadow-amber-500/10'
+                        : isMe
+                        ? 'bg-indigo-950/50 border-indigo-500/50'
+                        : 'bg-slate-950/70 border-slate-800'
+                }`;
+                card.innerHTML = `
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        ${renderPlayerAvatarBadge(p)}
+                        <div class="truncate">
+                            <div class="text-xs font-extrabold text-white truncate flex items-center gap-1">
+                                ${idx === 0 && scoreVal > 0 ? '<span title="Lider Pokoju">👑</span>' : ''}
+                                <span>${escapeHtml(p.nick || 'Gracz')}</span>
+                                ${isThisHost ? '<span class="text-[9px] bg-amber-500/25 text-amber-300 px-1.5 py-0.2 rounded font-extrabold">HOST</span>' : ''}
+                                ${isMe ? '<span class="text-[9px] bg-indigo-500/30 text-indigo-300 px-1.5 py-0.2 rounded">TY</span>' : ''}
+                            </div>
+                            <div class="text-[11px] font-bold ${p.isPlayingNow ? 'text-amber-300' : scoreColor}">
+                                ${p.isPlayingNow ? '📱 Gra na czole!' : `⭐ ${scoreVal > 0 ? '+' + scoreVal : scoreVal} pkt`}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                rosterGrid.appendChild(card);
+            });
+
+            // Baner informujący, że kolega trzyma teraz telefon na czole
+            const liveBanner = document.getElementById('live-player-banner');
+            if (someoneElsePlaying) {
+                liveBanner.classList.remove('hidden');
+                liveBanner.classList.add('flex');
+                document.getElementById('live-player-banner-text').textContent = `${someoneElsePlaying.nick} trzyma teraz telefon na czole – podpowiadajcie!`;
+            } else {
+                liveBanner.classList.add('hidden');
+                liveBanner.classList.remove('flex');
+            }
+
+            // Renderowanie Podstrony 3: RANKING GRACZY (Kto ma najwięcej punktów wygrywa!)
+            const leaderboardEl = document.getElementById('leaderboard-players-list');
+            if (leaderboardEl) {
+                leaderboardEl.innerHTML = '';
+                playersArr.forEach((p, idx) => {
+                    const scoreVal = p.score || 0;
+                    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
+                    const row = document.createElement('div');
+                    row.className = `flex items-center justify-between p-3.5 rounded-2xl border ${
+                        idx === 0 && scoreVal > 0
+                            ? 'bg-gradient-to-r from-amber-500/20 via-slate-900 to-slate-900 border-amber-400/50'
+                            : 'bg-slate-950/80 border-slate-800'
+                    }`;
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="font-display font-bold text-xl w-8 text-center">${medal}</span>
+                            ${renderPlayerAvatarBadge(p, 'w-10 h-10 text-xl')}
+                            <div class="truncate">
+                                <div class="font-display font-bold text-base text-white truncate flex items-center gap-1.5">
+                                    <span>${escapeHtml(p.nick || 'Gracz')}</span>
+                                    ${idx === 0 && scoreVal > 0 ? '<span class="text-[10px] bg-amber-400 text-slate-950 font-extrabold px-2 py-0.5 rounded-full">LIDER</span>' : ''}
+                                </div>
+                                <div class="text-[11px] text-slate-400">
+                                    Zgadnięte: <b class="text-emerald-400">${p.guessedCount || 0}</b> • Spasowane: <b class="text-rose-400">${p.passedCount || 0}</b>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="font-display font-bold text-2xl ${scoreVal > 0 ? 'text-amber-300' : scoreVal < 0 ? 'text-rose-400' : 'text-slate-300'}">
+                                ${scoreVal > 0 ? '+' + scoreVal : scoreVal} <span class="text-xs font-sans">pkt</span>
+                            </div>
+                        </div>
+                    `;
+                    leaderboardEl.appendChild(row);
+                });
+            }
+
+            // Renderowanie Podstrony 4: PANEL ADMINISTRATORA / EDYCJA PUNKTÓW GRACZY
+            const adminListEl = document.getElementById('admin-players-list');
+            if (adminListEl) {
+                adminListEl.innerHTML = '';
+                playersArr.forEach(p => {
+                    const scoreVal = p.score || 0;
+                    const isMe = p.id === myPlayer.id;
+                    const row = document.createElement('div');
+                    row.className = 'flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-950/85 border border-slate-800';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3 min-w-0">
+                            ${renderPlayerAvatarBadge(p, 'w-10 h-10 text-xl')}
+                            <div class="truncate">
+                                <div class="font-display font-bold text-base text-white truncate flex items-center gap-1.5">
+                                    <span>${escapeHtml(p.nick || 'Gracz')}</span>
+                                    ${p.id === roomHostId ? '<span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-md font-extrabold">HOST</span>' : ''}
+                                    ${isMe ? '<span class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md font-extrabold">TY</span>' : ''}
+                                </div>
+                                <div class="text-xs font-bold ${scoreVal > 0 ? 'text-emerald-400' : scoreVal < 0 ? 'text-rose-400' : 'text-slate-400'}">
+                                    Aktualny wynik: ${scoreVal > 0 ? '+' + scoreVal : scoreVal} pkt (🔥 ${p.guessedCount || 0} / 👎 ${p.passedCount || 0})
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 ml-auto">
+                            <button onclick="adminAdjustPlayerScore('${p.id}', -1)" class="px-3 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 font-display font-bold text-xs transition" title="Odejmij 1 punkt">
+                                -1 pkt
+                            </button>
+                            <button onclick="adminAdjustPlayerScore('${p.id}', 1)" class="px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 font-display font-bold text-xs transition" title="Dodaj 1 punkt">
+                                +1 pkt
+                            </button>
+                            <button onclick="adminResetSinglePlayerScore('${p.id}')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-amber-500 text-slate-300 hover:text-slate-950 border border-slate-700 font-bold text-xs transition" title="Wyzeruj punkty tego gracza">
+                                0 pkt
+                            </button>
+                            ${!isMe ? `
+                            <button onclick="adminRemovePlayer('${p.id}')" class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-400 border border-slate-800 flex items-center justify-center text-xs transition" title="Usuń gracza z pokoju">
+                                <i class="fa-solid fa-user-xmark"></i>
+                            </button>
+                            ` : ''}
+                        </div>
+                    `;
+                    adminListEl.appendChild(row);
+                });
+            }
+
+            // Renderowanie Podstrony 3: HISTORIA ODGADNIĘTYCH HASEŁ
+            const feedEl = document.getElementById('guessed-words-feed');
+            if (feedEl) {
+                feedEl.innerHTML = '';
+                if (roomGuessedFeed.length === 0) {
+                    feedEl.innerHTML = `
+                        <div class="text-center py-10 text-slate-400">
+                            <i class="fa-solid fa-trophy text-3xl mb-2 block text-amber-400/60"></i>
+                            <p class="text-sm font-bold text-white">Brak rozstrzygniętych haseł w tym pokoju!</p>
+                            <p class="text-xs text-slate-400 mt-1">Rozegrajcie pierwszą rundę na czole, a tutaj pojawi się pełna lista odgadniętych haseł.</p>
+                        </div>
+                    `;
+                } else {
+                    roomGuessedFeed.forEach(ev => {
+                        const isOk = ev.status === 'correct';
+                        const item = document.createElement('div');
+                        item.className = `flex items-center justify-between p-3 rounded-2xl border ${
+                            isOk ? 'bg-emerald-950/25 border-emerald-800/40' : 'bg-rose-950/20 border-rose-900/30 opacity-75'
+                        }`;
+                        item.innerHTML = `
+                            <div class="flex items-center gap-3 min-w-0 pr-2">
+                                <div class="w-9 h-9 rounded-xl ${isOk ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'} flex items-center justify-center shrink-0 text-base">
+                                    ${isOk ? '🔥' : '👎'}
+                                </div>
+                                <div class="truncate">
+                                    <div class="font-bold text-sm text-white truncate">${escapeHtml(ev.wordText)}</div>
+                                    <div class="text-[11px] text-slate-400">
+                                        Grał(a): <b class="text-indigo-300">${escapeHtml(ev.guesserNick)}</b> • Autor hasła: <b class="text-slate-200">${escapeHtml(ev.wordAuthor)}</b>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="text-xs font-extrabold px-2.5 py-1 rounded-xl shrink-0 ${isOk ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}">
+                                ${isOk ? '+1 pkt' : '-1 pkt'}
+                            </span>
+                        `;
+                        feedEl.appendChild(item);
+                    });
+                }
+            }
+
+            // Renderowanie Worka Haseł
+            const container = document.getElementById('words-list-container');
+            container.innerHTML = '';
+
+            if (total === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-slate-400">
+                        <i class="fa-solid fa-box-open text-3xl mb-2 block text-indigo-400"></i>
+                        <p class="text-sm font-bold text-white">Worek pokoju jest na razie pusty!</p>
+                        <p class="text-xs text-slate-400 mt-1">Niech każdy wpisze po kilka haseł powyżej (nikt nie wylosuje swojego własnego hasła!) lub kliknijcie przycisk +25 losowych haseł.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            wordsPool.forEach((item, index) => {
+                const isUsed = isWordAlreadyUsedAnywhere(item);
+                const isMine = isWordCreatedByMe(item);
+                const row = document.createElement('div');
+                row.className = `flex items-center justify-between p-3 rounded-2xl border transition ${
+                    isUsed ? 'bg-slate-950/40 border-slate-800/50 opacity-55' : 'bg-slate-950 border-slate-800'
+                }`;
+
+                const displayTitle = showSpoilers
+                    ? escapeHtml(item.text)
+                    : `🔒 Tajne hasło #${total - index}`;
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0 pr-2">
+                        <div class="w-9 h-9 rounded-xl ${showSpoilers ? 'bg-pink-500/20 text-pink-300' : 'bg-slate-900 text-slate-400'} flex items-center justify-center shrink-0 text-xs font-bold border border-slate-800">
+                            ${showSpoilers ? '👁️' : '🤫'}
+                        </div>
+                        <div class="truncate">
+                            <div class="font-bold text-sm ${showSpoilers ? 'text-white' : 'text-slate-300'} truncate">
+                                ${displayTitle}
+                            </div>
+                            <div class="text-[11px] text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                <span class="text-indigo-400 font-semibold">${escapeHtml(item.category || 'Inne')}</span>
+                                <span>• Dodał(a): <b class="text-slate-200">${escapeHtml(item.author || 'Ekipa')}</b></span>
+                                ${isMine ? '<span class="text-emerald-400 font-bold">• Twoje (Dla innych)</span>' : ''}
+                                ${isUsed ? '<span class="text-amber-400 font-bold">• Odegrane</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="removeWord('${item.id}')" class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-500 hover:text-rose-400 flex items-center justify-center shrink-0 transition" title="Usuń hasło">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initLobbyScreen();
+            initCloudEngine();
+            updateUI();
+        });
+    </script>
+</body>
+</html>
