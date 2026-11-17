@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#100d24">
-    <title>CZÓŁKO.IO v12 - Imprezowa Gra Ekipy</title>
+    <title>CZÓŁKO.IO v13 - Imprezowa Gra Ekipy</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -237,7 +237,7 @@
                         <i class="fa-solid fa-mobile-screen-button text-xl text-white -rotate-90"></i>
                     </span>
                     <h1 class="font-display font-bold text-4xl sm:text-5xl tracking-wide text-white">CZÓŁKO<span class="text-pink-300">.IO</span></h1>
-                    <span class="text-[11px] font-extrabold bg-indigo-300 text-indigo-950 px-2 py-0.5 rounded-full">v12</span>
+                    <span class="text-[11px] font-extrabold bg-indigo-300 text-indigo-950 px-2 py-0.5 rounded-full">v13</span>
                 </div>
                 <p class="mt-1.5 text-xs text-indigo-100/80 font-medium">Imprezowa gra na telefon dla całej ekipy</p>
             </div>
@@ -535,7 +535,7 @@
                         </label>
                         <p class="flex items-center gap-2.5 bg-slate-950/60 px-3.5 py-2.5 rounded-xl border border-slate-800 text-xs text-slate-200 font-semibold">
                             <i class="fa-solid fa-shuffle text-indigo-300" aria-hidden="true"></i>
-                            Każde hasło wypada z puli po pierwszym losowaniu.
+                            Hasła nie powtarzają się, aż worek się skończy – wtedy tasuje się sam od nowa 🔄
                         </p>
                     </div>
 
@@ -543,7 +543,10 @@
                         <span class="text-slate-400">
                             Kto ma najwięcej punktów wygrywa! <b class="text-emerald-400">+1 pkt SIADŁO</b> • <b class="text-rose-400">-1 pkt PAS</b>
                         </span>
-                        <span class="text-pink-300 font-bold">Wylosowane w lobby <span id="stat-used-words">0</span></span>
+                        <span class="flex items-center gap-2">
+                            <span class="text-pink-300 font-bold">Wylosowane w lobby <span id="stat-used-words">0</span></span>
+                            <button id="btn-reshuffle-bag" type="button" onclick="reshuffleBag()" class="hidden text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-200 hover:text-white transition">🔄 Tasuj od nowa</button>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -1077,6 +1080,8 @@
         // --- WSPÓLNY STAN POKOJU ---
         let wordsPool = [];
         let usedWordIds = new Set();
+        let usedEpoch = 0; // numer "przetasowania" worka – rośnie tylko u hosta, reszta go przejmuje
+        let recentWordIds = []; // host: ostatnio wylosowane hasła (żeby po przetasowaniu nie wróciło od razu to samo)
         let roomPlayers = {}; // { playerId: { ... } }
         let roomGuessedFeed = []; // Historia odgadniętych i spasowanych haseł w pokoju
         let roomHostId = ''; // ID Hosta / Administratora pokoju
@@ -1576,6 +1581,8 @@
             roomSecurity = { requireWhitelist: false, allowedLogins: [] };
             wordsPool = [];
             usedWordIds.clear();
+            usedEpoch = 0;
+            recentWordIds = [];
             roomGuessedFeed = [];
             roomWordChanges.clear();
             roomStateVersions.clear();
@@ -1685,7 +1692,7 @@
                 return;
             }
 
-            const connection = { client, topic: `czolko_io_pl_v12/room_${attempt.code}`, ready: false, validating: false, resumeTimer: null };
+            const connection = { client, topic: `czolko_io_pl_v13/room_${attempt.code}`, ready: false, validating: false, resumeTimer: null };
             roomConnection = connection;
             client.on('connect', () => {
                 if (roomConnection !== connection) return;
@@ -2204,6 +2211,15 @@
             roomGuessedFeed = roomGuessedFeed.slice(0, 80);
         }
 
+        function applyUsedEpoch(epoch) {
+            if (!Number.isSafeInteger(epoch) || epoch <= usedEpoch) return false;
+            usedEpoch = epoch;
+            usedWordIds.clear();
+            scheduleRoomRender();
+            showToast('🔄 Worek przetasowany – wszystkie hasła wracają do puli!', 'info');
+            return true;
+        }
+
         function mergeIncomingRoomState(incoming, senderId) {
             const sender = roomPlayers[senderId];
             if (!sender || !Number.isSafeInteger(incoming?.version) || incoming.version <= (roomStateVersions.get(senderId) || 0)) return;
@@ -2211,8 +2227,11 @@
             const fromHost = senderId === roomHostId;
             mergeRoomWords(incoming);
             mergeRoomHistory(incoming, fromHost);
-            // Zużycie hasła jest nieodwracalne w obrębie sesji. Każdy uczestnik przekazuje znany rejestr.
-            if (Array.isArray(incoming.usedIds)) {
+            // Zużycie hasła obowiązuje do końca "epoki" worka. Gdy host przetasuje worek (epoka+1),
+            // wszyscy czyszczą rejestr zużytych; wpisy ze starszych epok są ignorowane (nie ma już duchów z poprzednich rund).
+            const incomingEpoch = Number.isSafeInteger(incoming.usedEpoch) && incoming.usedEpoch >= 0 ? incoming.usedEpoch : 0;
+            applyUsedEpoch(incomingEpoch);
+            if (incomingEpoch === usedEpoch && Array.isArray(incoming.usedIds)) {
                 for (const id of incoming.usedIds) {
                     if (typeof id === 'string' && ROOM_WORD_ID.test(id)) usedWordIds.add(id);
                 }
@@ -2251,6 +2270,7 @@
                 player: { ...roomPlayerStats(myPlayer), isPlayingNow: myPlayer.isPlayingNow, currentWordId: myPlayer.currentWordId || null },
                 words: wordsPool,
                 usedIds: [...usedWordIds],
+                usedEpoch,
                 wordChanges: Array.from(roomWordChanges, ([id, [time, removed]]) => [id, time, removed]),
                 guessedFeed: roomGuessedFeed.slice(0, 60),
                 clearedAt: roomMeta('clearedAt'),
@@ -2383,57 +2403,90 @@
             showToast('Dodano! Ktoś z kolegów wylosuje to hasło (Ty go nie dostaniesz).', 'success');
         };
 
-        window.loadTikTokPack = function() {
-            const tiktokWords = [
-                { text: 'Sigma Boy', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Skibidi Toilet', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Mewing (Pokazywanie szczęki)', category: '🔥 TikTok / Gen-Z' },
-                { text: '+10000 Aury', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Bambi', category: '😎 Osoba / Ekipa' },
-                { text: 'Książulo testujący kebaba', category: '😎 Osoba / Ekipa' },
-                { text: 'Rizzler (Podrywacz)', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Looksmaxxing', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Delulu (Życie w urojeniach)', category: '🔥 TikTok / Gen-Z' },
-                { text: 'NPC na transmisji Live', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Brat (Charli XCX)', category: '🔥 TikTok / Gen-Z' },
-                { text: 'IShowSpeed szczekający do kamery', category: '😎 Osoba / Ekipa' },
-                { text: 'Friz (Karol Wiśniewski)', category: '😎 Osoba / Ekipa' },
-                { text: 'Brainrot (Zgnilizna mózgu po scrollowaniu)', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Pani od matematyki: Dzwonek jest dla mnie!', category: '💀 Przypał / Akcja' },
-                { text: 'Bober (Gryzie!)', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Zestaw Mata w McDonaldzie', category: '🍕 Rzecz / Klasyk' },
-                { text: 'Robert Makłowicz', category: '😎 Osoba / Ekipa' },
-                { text: 'Spóźnienie na pierwszą lekcję z kebsem w ręku', category: '💀 Przypał / Akcja' },
-                { text: 'Pedro Pedro Pedro (Szop pracz w kółku)', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Chill guy (Wyluzowany piesek z mema)', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Impostor z Among Us', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Cringe (Żenada roku)', category: '🔥 TikTok / Gen-Z' },
-                { text: 'Pov: Budzisz się 5 minut przed lekcją', category: '💀 Przypał / Akcja' },
-                { text: 'Energetyk Monster Biały Zero', category: '🍕 Rzecz / Klasyk' }
+        // Gotowa paczka haseł (TikTok / slang / szkoła-studia / popkultura, wiek ok. 16-22).
+        // Przycisk dorzuca za każdym razem 25 LOSOWYCH haseł, których jeszcze nie ma w worku.
+        const TIKTOK_WORD_PACK_BATCH = 25;
+        const TIKTOK_WORD_PACK = (() => {
+            const groups = [
+                ['🔥 TikTok / Gen-Z', [
+                    'Sigma Boy', 'Skibidi Toilet', 'Mewing (Pokazywanie szczęki)', '+10000 Aury', 'Aura farming',
+                    'Rizzler (Podrywacz)', 'Looksmaxxing', 'Maxxing', 'Delulu (Życie w urojeniach)', 'NPC na transmisji Live',
+                    'Brat (Charli XCX)', 'Brainrot (Zgnilizna mózgu po scrollowaniu)', 'Bober (Gryzie!)',
+                    'Pedro Pedro Pedro (Szop pracz w kółku)', 'Chill guy (Wyluzowany piesek z mema)', 'Impostor z Among Us',
+                    'Cringe (Żenada roku)', 'Szponcić', 'Szpont', '6 7 (six seven)', 'OKPA', 'Larpować', 'Kukiriniarz', 'Brokuł',
+                    'Unc behavior', 'AI slop (Tandetne treści z AI)', 'Tuff', 'Peak (To jest peak)', 'Twin', 'Lowkey', 'Crashout',
+                    'Tralalero Tralala', 'Bombardiro Crocodilo', 'Tung Tung Tung Sahur', 'Ballerina Cappuccina', 'Labubu',
+                    'Czekolada dubajska', 'Matcha', 'Kubek Stanley', 'Gen Z stare (Puste spojrzenie)', 'Ohio (Tylko w Ohio)',
+                    'Sus (Podejrzane)', 'No cap', 'Slay', 'Ghosting', 'Situationship', 'Red flag', 'Main character energy',
+                    'Idź dotknąć trawy', 'Glow up', 'Villain era', 'FOMO', 'Taniec z TikToka', 'GRWM (Get Ready With Me)',
+                    'Day in my life', 'Storytime z TikToka', 'Duet na TikToku', 'Prezent Lew na TikTok Live', 'Lip sync',
+                    'Algorytm TikToka', 'Link w bio', 'FYP (Dla Ciebie)', 'Doomscrolling o 3 w nocy', 'Unboxing', 'Haul z Sheina',
+                    'Shein', 'Temu', 'Vinted', 'Roblox', 'Fortnite', 'Minecraft', 'Brawl Stars', 'Steal a Brainrot', 'Grow a Garden',
+                    'Counter-Strike', 'Valorant', 'League of Legends', 'Discord', 'Snapchat (Snapstreak)', 'BeReal',
+                    'Reelsy na Instagramie', 'YouTube Shorts', 'Twitch', 'Spotify Wrapped', 'ChatGPT odrabia lekcje', 'Librus',
+                    'Wyświetlone i brak odpowiedzi', 'Tryb samolotowy', 'Tryb goblina'
+                ]],
+                ['😎 Osoba / Ekipa', [
+                    'Bambi', 'Książulo testujący kebaba', 'IShowSpeed szczekający do kamery', 'Friz (Karol Wiśniewski)',
+                    'Robert Makłowicz', 'Robert Lewandowski', 'Messi', 'Cristiano Ronaldo (SIUUU)', 'Taco Hemingway', 'Quebonafide',
+                    'Sanah', 'Dawid Podsiadło', 'Young Leosia', 'MrBeast', 'Kai Cenat', 'Taylor Swift', 'Billie Eilish', 'Shrek',
+                    'SpongeBob', 'Janusz biznesu', 'Karyna', 'Sebix', 'Boomer', 'Zoomer', 'Pani z dziekanatu', 'Pani z szatni',
+                    'Nauczyciel WF-u', 'Pani z sekretariatu', 'Kolega, który zawsze się spóźnia', 'Wujek na imprezie rodzinnej',
+                    'Starsza pani w autobusie', 'Kurier z paczką', 'Pan z Żabki o 2 w nocy', 'Ochroniarz przed klubem',
+                    'Chłopak z osiedla na hulajnodze', 'Pani z biblioteki'
+                ]],
+                ['💀 Przypał / Akcja', [
+                    'Pani od matematyki: Dzwonek jest dla mnie!', 'Spóźnienie na pierwszą lekcję z kebsem w ręku',
+                    'Pov: Budzisz się 5 minut przed lekcją', 'Ściąganie na sprawdzianie', 'Bieg za autobusem', 'Matura ustna',
+                    'Studniówka', 'Poprawka z matmy', 'Wagary', 'Zapomniany zeszyt', 'Domówka', 'Sylwester u kolegi', 'Osiemnastka',
+                    'Kac po osiemnastce', 'Egzamin na prawo jazdy', 'Oblany plac manewrowy', 'Kolejka w Żabce po energetyka',
+                    'Zero procent baterii', 'Pęknięty ekran telefonu', 'Wysłanie wiadomości nie do tej osoby',
+                    'Nagrywanie tańca na ulicy', 'Zaśnięcie na lekcji', 'Pierwszy dzień w pracy wakacyjnej', 'Rozmowa o pracę',
+                    'Sesja na studiach', 'Akademik', 'Kolokwium', 'Zarwana noc przed zaliczeniem', 'Student bez kasy',
+                    'Zupka chińska na obiad', 'Zgubiony telefon w klubie', 'Wjazd hulajnogą w znajomego', 'Selfie w windzie',
+                    'Wejście do złej klasy', 'Atak śmiechu na lekcji', 'Odpowiedź: Nie wiem', 'Nagrywanie relacji na imprezie',
+                    'Pierwsza randka', 'Rozstanie przez wiadomość'
+                ]],
+                ['🍕 Rzecz / Klasyk', [
+                    'Zestaw Mata w McDonaldzie', 'Energetyk Monster Biały Zero', 'Kebab z kurczaka', 'Zapiekanka z budki',
+                    'Frytki z McDonalda', 'Prince Polo', 'Hot Cheetos', 'Pizza z ananasem', 'Sushi', 'Bubble tea', 'AirPodsy',
+                    'Powerbank', 'Hulajnoga elektryczna', 'Deskorolka', 'Pop it', 'Kostka Rubika', 'Plecak Kånken', 'Nike Air Force',
+                    'Crocsy', 'Przypinki do Crocsów', 'Bluza oversize', 'Żappka', 'Paczkomat', 'Kubek z kawą na wynos',
+                    'Chipsy Lays', 'Kinder Bueno', 'Oreo', 'Ramen w kubku', 'Lody z automatu', 'Słuchawki z kablem',
+                    'Ładowarka, która zawsze znika', 'Smartwatch', 'Konsola PlayStation', 'Pad do gry'
+                ]]
             ];
+            return groups.flatMap(([category, words]) => words.map(text => ({ text, category })));
+        })();
 
-            let added = 0;
+        window.loadTikTokPack = function() {
             const existingIds = new Set(wordsPool.map(word => word.id));
-            tiktokWords.forEach(item => {
+            const fresh = TIKTOK_WORD_PACK.filter(item => !existingIds.has(roomWordId(item.text)));
+            if (!fresh.length) {
+                showToast('Wszystkie gotowe hasła z paczki już są w worku! Dopiszcie własne.', 'warning');
+                return;
+            }
+            const batch = Math.min(TIKTOK_WORD_PACK_BATCH, fresh.length);
+            for (let i = 0; i < batch; i++) {
+                const j = i + randomIndex(fresh.length - i);
+                [fresh[i], fresh[j]] = [fresh[j], fresh[i]];
+            }
+            fresh.slice(0, batch).forEach(item => {
                 const id = roomWordId(item.text);
-                if (!existingIds.has(id)) {
-                    existingIds.add(id);
-                    restoreRemovedRoomWord(id);
-                    wordsPool.push({
-                        id,
-                        text: item.text,
-                        category: item.category,
-                        author: '🎲 Losowa Paczka',
-                        authorId: 'SYSTEM_PACK',
-                        authorNick: ''
-                    });
-                    added++;
-                }
+                restoreRemovedRoomWord(id);
+                wordsPool.push({
+                    id,
+                    text: item.text,
+                    category: item.category,
+                    author: '🎲 Losowa Paczka',
+                    authorId: 'SYSTEM_PACK',
+                    authorNick: ''
+                });
             });
 
             updateUI();
             broadcastRoomState();
-            showToast(`Dorzucono ${added} losowych haseł (każdy może je wylosować)!`, 'success');
+            showToast(`Dorzucono ${batch} losowych haseł (każdy może je wylosować)! Zostało w paczce: ${fresh.length - batch}`, 'success');
         };
 
         window.removeWord = function(id) {
@@ -2706,25 +2759,12 @@
                 return;
             }
 
-            const available = getAvailableWordsFor(myPlayer);
-            if (available.length === 0) {
-                const blockOwn = roomRules.blockOwnWords !== false;
-                const unusedWords = wordsPool.filter(w => !usedWordIds.has(w.id));
-                const nonOwnUnused = unusedWords.filter(w => !blockOwn || !isWordCreatedBy(w, myPlayer));
-
-                if (unusedWords.length === 0) {
-                    showToast('Brak dostępnych haseł. Dodajcie nowe hasła do lobby.', 'warning');
-                    switchTab('words');
-                    return;
-                }
-
-                if (nonOwnUnused.length === 0) {
-                    showToast('W puli zostały już TYLKO Twoje własne hasła! Niech teraz telefon weźmie inny gracz albo dopiszcie nowe hasła.', 'warning');
-                    switchTab('words');
-                    return;
-                }
-
-                showToast('Brak dostępnych dla Ciebie haseł w worku!', 'warning');
+            // Wyczerpana pula NIE blokuje startu – host automatycznie tasuje worek od nowa.
+            // Blokujemy tylko wtedy, gdy w całym worku są wyłącznie hasła dodane przez tego gracza.
+            const blockOwnRule = roomRules.blockOwnWords !== false;
+            if (blockOwnRule && wordsPool.every(w => isWordCreatedBy(w, myPlayer))) {
+                showToast('W worku są tylko Twoje własne hasła! Niech ktoś dopisze swoje albo kliknij „+25 losowych haseł”.', 'warning');
+                switchTab('words');
                 return;
             }
 
@@ -2801,6 +2841,7 @@
         function cancelPendingWordDraw() {
             if (!pendingWordDraw) return;
             clearTimeout(pendingWordDraw.timeout);
+            clearInterval(pendingWordDraw.retry);
             pendingWordDraw = null;
         }
 
@@ -2811,12 +2852,71 @@
             isWaitingForNextWord = false;
         }
 
-        function reserveRoomWord(player) {
-            const available = getAvailableWordsFor(player);
-            if (!available.length) return null;
-            const word = available[Math.floor(Math.random() * available.length)];
+        // Losowanie niezależne od kryptograficznie słabego Math.random – bez obciążenia modulo
+        function randomIndex(n) {
+            if (n <= 1) return 0;
+            const buf = new Uint32Array(1);
+            const limit = Math.floor(0x100000000 / n) * n;
+            do { crypto.getRandomValues(buf); } while (buf[0] >= limit);
+            return buf[0] % n;
+        }
+
+        // Przetasowanie worka: wszystkie hasła wracają do puli (poza tymi, które akurat ktoś ma na czole)
+        function startNewShuffleCycle() {
+            const inPlay = Object.values(roomPlayers)
+                .filter(member => member.isPlayingNow && member.currentWordId)
+                .map(member => member.currentWordId);
+            usedWordIds.clear();
+            inPlay.forEach(id => usedWordIds.add(id));
+            usedEpoch++;
+        }
+
+        window.reshuffleBag = function() {
+            if (!isRoomHost()) return;
+            startNewShuffleCycle();
+            recentWordIds = [];
+            updateUI();
+            broadcastRoomState();
+            showToast('🔄 Worek przetasowany od nowa – wszystkie hasła wróciły do puli!', 'success');
+        };
+
+        // Host jest jedynym źródłem prawdy. Zwraca { word, reason, cycled }.
+        // Kolejność: 1) świeże hasło  2) gdy dla tego gracza zostały tylko własne – powtórka cudzego hasła
+        // 3) gdy w worku nie ma już żadnych świeżych – automatyczne przetasowanie. Runda NIE kończy się, dopóki da się coś wylosować.
+        function drawRoomWord(player) {
+            if (!wordsPool.length) return { word: null, reason: 'empty', cycled: false };
+            const blockOwn = roomRules.blockOwnWords !== false;
+            const onForeheads = new Set(Object.values(roomPlayers)
+                .filter(member => member.isPlayingNow && member.id !== player.id && member.currentWordId)
+                .map(member => member.currentWordId));
+            const allowed = wordsPool.filter(word => !onForeheads.has(word.id)
+                && (!blockOwn || !isWordCreatedBy(word, player)));
+            if (!allowed.length) {
+                const onlyOwn = blockOwn && wordsPool.every(word => isWordCreatedBy(word, player));
+                return { word: null, reason: onlyOwn ? 'only-own' : 'empty', cycled: false };
+            }
+
+            let fresh = allowed.filter(word => !usedWordIds.has(word.id));
+            let cycled = false;
+            if (!fresh.length) {
+                const freshForOthers = wordsPool.some(word => !usedWordIds.has(word.id) && !onForeheads.has(word.id));
+                if (!freshForOthers) {
+                    startNewShuffleCycle();
+                    cycled = true;
+                    fresh = allowed.filter(word => !usedWordIds.has(word.id));
+                }
+            }
+
+            let candidates = fresh.length ? fresh : allowed;
+            const notRecent = candidates.filter(word => !recentWordIds.includes(word.id));
+            if (notRecent.length) candidates = notRecent;
+
+            const word = candidates[randomIndex(candidates.length)];
             usedWordIds.add(word.id);
-            return word;
+            recentWordIds.push(word.id);
+            const recentLimit = Math.max(1, Math.min(8, Math.floor(wordsPool.length / 2)));
+            while (recentWordIds.length > recentLimit) recentWordIds.shift();
+            return { word, reason: null, cycled };
         }
 
         function handleGameRoomEvent(msg) {
@@ -2830,8 +2930,10 @@
                     for (const id of lastDrawReplyByPlayer.keys()) {
                         if (!roomPlayers[id]) lastDrawReplyByPlayer.delete(id);
                     }
-                    reply = { targetId: player.id, requestId: msg.requestId, word: reserveRoomWord(player) };
+                    const drawn = drawRoomWord(player);
+                    reply = { targetId: player.id, requestId: msg.requestId, word: drawn.word, reason: drawn.reason, usedEpoch };
                     lastDrawReplyByPlayer.set(player.id, reply);
+                    if (drawn.cycled) showToast('🔄 Worek się skończył – tasujemy hasła od nowa!', 'info');
                     if (reply.word) {
                         broadcastRoomState();
                         updateUI();
@@ -2839,7 +2941,8 @@
                 }
                 sendRoomEvent('GAME_DRAW_GRANT', reply);
             } else if (msg.type === 'GAME_DRAW_GRANT' && msg.senderId === roomHostId) {
-                const word = msg.word;
+                const word = msg.word ?? null;
+                if (Number.isSafeInteger(msg.usedEpoch)) applyUsedEpoch(msg.usedEpoch);
                 if (word !== null) {
                     if (typeof word?.text !== 'string' || word.text.length > 240 || word.id !== roomWordId(word.text)) return;
                     if (!usedWordIds.has(word.id)) {
@@ -2849,7 +2952,7 @@
                 }
                 if (msg.targetId !== myPlayer.id || msg.requestId !== pendingWordDraw?.requestId) return;
                 cancelPendingWordDraw();
-                showReservedWord(word);
+                showReservedWord(word, msg.reason);
             }
         }
 
@@ -2861,7 +2964,9 @@
                 return;
             }
             if (roomHostId === myPlayer.id) {
-                showReservedWord(reserveRoomWord(myPlayer));
+                const drawn = drawRoomWord(myPlayer);
+                if (drawn.cycled) showToast('🔄 Worek się skończył – tasujemy hasła od nowa!', 'info');
+                showReservedWord(drawn.word, drawn.reason);
                 return;
             }
 
@@ -2873,15 +2978,21 @@
                 cancelPendingWordDraw();
                 showToast('Host nie odpowiedział na losowanie. Spróbuj zacząć rundę ponownie.', 'warning');
                 finishRound();
-            }, 6500);
-            pendingWordDraw = { requestId, timeout };
+            }, 10000);
+            // to samo żądanie (to samo requestId) jest bezpieczne do powtórzenia – host odpowie tym samym hasłem
+            const retry = setInterval(() => sendRoomEvent('GAME_DRAW_REQUEST', { requestId }), 1500);
+            pendingWordDraw = { requestId, timeout, retry };
             sendRoomEvent('GAME_DRAW_REQUEST', { requestId });
         }
 
-        function showReservedWord(word) {
+        function showReservedWord(word, reason) {
             if (!word) {
                 playSound('end');
-                showToast('Koniec dostępnych haseł w worku!', 'info');
+                if (reason === 'only-own') {
+                    showToast('W worku zostały tylko hasła dodane przez Ciebie. Niech ktoś dopisze swoje albo host wyłączy blokadę własnych haseł.', 'warning');
+                } else {
+                    showToast('Worek jest pusty – dodajcie hasła (np. \"+25 losowych haseł\").', 'warning');
+                }
                 finishRound();
                 return;
             }
@@ -2898,7 +3009,10 @@
             document.getElementById('active-word-category').textContent = currentActiveWord.category || '😎 Osoba / Ekipa';
             document.getElementById('active-word-author').textContent = `Od: ${currentActiveWord.author || 'Ekipa'}`;
             document.getElementById('active-word-author-mobile').textContent = `Wymyślił(a): ${currentActiveWord.author || 'Ekipa'}`;
-            document.getElementById('active-remaining-pool').textContent = `Zostało dla Ciebie w puli: ${getAvailableWordsFor(myPlayer).length}`;
+            const freshLeft = getAvailableWordsFor(myPlayer).length;
+            document.getElementById('active-remaining-pool').textContent = freshLeft > 0
+                ? `Zostało dla Ciebie w puli: ${freshLeft}`
+                : 'Pula się kończy – za chwilę tasujemy od nowa 🔄';
         }
 
         // PUNKTACJA: +1 za Zgadnięte (correct), -1 za PAS (pass) + 3 sekundy odliczania przed kolejnym hasłem
@@ -2933,7 +3047,7 @@
             }
 
             roomGuessedFeed.unshift({
-                eventId: 'ev_v12_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+                eventId: 'ev_v13_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
                 wordText: currentActiveWord.text,
                 category: currentActiveWord.category,
                 wordAuthor: currentActiveWord.author || 'Ekipa',
@@ -2952,14 +3066,8 @@
                 card.classList.remove('flash-correct', 'flash-pass');
             }, 260);
 
-            // Sprawdzamy, czy zostały jeszcze jakieś unikalne hasła dla tego gracza w puli pokoju
-            const remainingAvailable = getAvailableWordsFor(myPlayer);
-            if (remainingAvailable.length === 0) {
-                playSound('end');
-                showToast('Koniec dostępnych haseł w worku!', 'info');
-                finishRound();
-                return;
-            }
+            // Nie sprawdzamy już lokalnie, czy "coś zostało" – lokalny widok bywa nieaktualny i wcześniej
+            // potrafił zakończyć rundę po jednym haśle. O tym, czy jest hasło, decyduje wyłącznie host.
 
             // 3-sekundowe odliczanie przed pojawieniem się kolejnego unikalnego hasła
             let nextSec = 3;
@@ -3057,6 +3165,8 @@
             // Synchronizacja przełączników zasad Hosta
             const amHost = isRoomHost();
             document.getElementById('delete-room-trigger-btn').disabled = !amHost;
+            const reshuffleBtn = document.getElementById('btn-reshuffle-bag');
+            if (reshuffleBtn) reshuffleBtn.classList.toggle('hidden', !amHost);
             const blockOwnEl = document.getElementById('block-own-words-toggle');
             if (blockOwnEl) {
                 blockOwnEl.checked = roomRules.blockOwnWords !== false;
