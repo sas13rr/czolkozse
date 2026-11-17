@@ -362,7 +362,7 @@
 
 
     <!-- ========================================================================= -->
-    <!-- NAGŁÓWEK W POKOJU GRY (Z PRZYCISKIEM FULL SCREEN I 3 PODSTRONAMI)         -->
+    <!-- NAGŁÓWEK W POKOJU GRY (Z PRZYCISKIEM FULL SCREEN I PODSTRONAMI)            -->
     <!-- ========================================================================= -->
     <header id="app-header" class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-30">
         <div class="room-header-inner max-w-4xl mx-auto py-2.5 flex flex-wrap items-center justify-between gap-2">
@@ -401,23 +401,28 @@
                 </button>
             </div>
 
-            <!-- Nawigacja 3 Podstron: Gra / Baza Haseł / Rankingi -->
-            <nav class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 w-full sm:w-auto justify-between sm:justify-start">
-                <button onclick="switchTab('play')" id="tab-btn-play" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md">
+            <!-- Nawigacja 5 Podstron: Gra / Ekipa Live / Baza Haseł / Rankingi / Admin -->
+            <nav class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 w-full sm:w-auto justify-between sm:justify-start overflow-x-auto no-scrollbar">
+                <button onclick="switchTab('play')" id="tab-btn-play" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md">
                     <i class="fa-solid fa-gamepad"></i>
                     <span>Graj</span>
                 </button>
-                <button onclick="switchTab('words')" id="tab-btn-words" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                <button onclick="switchTab('spectate')" id="tab-btn-spectate" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-users-viewfinder text-emerald-400"></i>
+                    <span>Ekipa Live</span>
+                    <span id="nav-spectate-count" class="bg-slate-800 text-emerald-300 text-[11px] px-1.5 py-0.5 rounded-full font-extrabold">0</span>
+                </button>
+                <button onclick="switchTab('words')" id="tab-btn-words" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
                     <i class="fa-solid fa-fire-flame-curved text-pink-400"></i>
                     <span>Hasła</span>
                     <span id="nav-word-count" class="bg-slate-800 text-amber-300 text-[11px] px-1.5 py-0.5 rounded-full font-extrabold">0</span>
                 </button>
-                <button onclick="switchTab('ranking')" id="tab-btn-ranking" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                <button onclick="switchTab('ranking')" id="tab-btn-ranking" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
                     <i class="fa-solid fa-trophy text-amber-400"></i>
                     <span>Rankingi</span>
                     <span id="nav-guessed-count" class="bg-slate-800 text-emerald-300 text-[11px] px-1.5 py-0.5 rounded-full font-extrabold">0</span>
                 </button>
-                <button onclick="switchTab('admin')" id="tab-btn-admin" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
+                <button onclick="switchTab('admin')" id="tab-btn-admin" class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white">
                     <i class="fa-solid fa-shield-halved text-rose-400"></i>
                     <span>Admin</span>
                 </button>
@@ -440,6 +445,9 @@
                     <div id="live-player-banner-text" class="text-sm font-bold text-white">Gracz trzyma teraz telefon przy czole – podpowiadajcie!</div>
                 </div>
             </div>
+            <button type="button" onclick="switchTab('spectate')" class="shrink-0 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-xs px-3.5 py-2 rounded-xl shadow-md transition active:scale-95">
+                Podgląd ekipy →
+            </button>
         </div>
 
         <!-- ========================================== -->
@@ -455,6 +463,9 @@
                         <span id="players-online-count" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-extrabold px-2.5 py-0.5 rounded-full">1 online</span>
                     </div>
                     <div class="flex items-center gap-3">
+                        <button onclick="switchTab('spectate')" class="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-users-viewfinder" aria-hidden="true"></i> Hasła ekipy
+                        </button>
                         <button onclick="switchTab('ranking')" class="text-xs text-pink-400 hover:text-pink-300 font-bold flex items-center gap-1">
                             <i class="fa-solid fa-ranking-star" aria-hidden="true"></i> Ranking
                         </button>
@@ -561,6 +572,45 @@
                     Po starcie masz 3 sekundy na przyłożenie telefonu do czoła.
                 </p>
             </div>
+        </section>
+
+
+        <!-- ======================================================= -->
+        <!-- NOWA ZAKŁADKA: EKIPA LIVE (HASŁA WSZYSTKICH POZA MOIM)  -->
+        <!-- ======================================================= -->
+        <section id="view-spectate" class="hidden flex-1 flex flex-col gap-5">
+            
+            <!-- Nagłówek informacyjny zakładki Ekipa Live -->
+            <div class="bg-gradient-to-br from-slate-900 via-indigo-950/50 to-slate-900 border border-indigo-500/30 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-300 text-xl shrink-0">
+                        <i class="fa-solid fa-users-viewfinder"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">PODGLĄD NA ŻYWO BEZ SPOILERÓW</span>
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> LIVE
+                            </span>
+                        </div>
+                        <h2 class="font-display text-xl sm:text-2xl font-bold text-white">Hasła innych graczy na czole</h2>
+                        <p class="text-xs text-slate-300">
+                            Widzisz tu hasła całej ekipy <b>oprócz swojego własnego</b>. Przyciski <b>PAS / SIADŁO</b> są mniejsze, żeby nie kliknąć ich przypadkiem!
+                        </p>
+                    </div>
+                </div>
+
+                <button type="button" onclick="startPreGameCountdown()" class="bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-200 hover:text-white text-xs font-bold px-3.5 py-2.5 rounded-2xl transition flex items-center gap-1.5 shrink-0">
+                    <i class="fa-solid fa-mobile-screen-button -rotate-90"></i>
+                    <span>Moja kolej na czole</span>
+                </button>
+            </div>
+
+            <!-- Siatka kart innych graczy (wszystkie poza moim) -->
+            <div id="spectate-cards-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                <!-- Dynamicznie generowane karty graczy z ich aktualnymi hasłami, autorem hasła i kompaktowymi przyciskami PAS / SIADŁO -->
+            </div>
+
         </section>
 
 
@@ -1071,6 +1121,8 @@
             guessedCount: 0,
             passedCount: 0,
             isPlayingNow: false,
+            currentWordId: null,
+            currentWordSnap: null,
             lastSeen: Date.now()
         };
 
@@ -1098,6 +1150,7 @@
         let nextWordRequestId = 0;
         const lastDrawReplyByPlayer = new Map();
         const lastDrawKeyByPlayer = new Map(); // host: klucz ostatniego hasła każdego gracza (brak powtórki z rzędu)
+        const remoteJudgeCooldowns = new Map(); // zabezpieczenie przed podwójnym kliknięciem w zakładce Ekipa Live
         let showSpoilers = false;
         let gameDurationSeconds = 0; // Zawsze 0 = Bez limitu czasu
         let preCountdownInterval = null;
@@ -1319,7 +1372,6 @@
             }
         };
 
-        // Wynik walidacji dużych awatarów jest zapamiętywany – ten sam 4 MB napis nie jest sprawdzany przy każdym odświeżeniu listy.
         const validatedAvatars = new Set();
         function safeAvatarSrc(src) {
             if (typeof src !== 'string' || src.length > MAX_AVATAR_URL_LENGTH) return '';
@@ -1332,8 +1384,6 @@
             return src;
         }
 
-        // Duży GIF wstawiany jako data-URL do innerHTML byłby parsowany od nowa przy każdym odświeżeniu.
-        // Zamieniamy go raz na lekki adres blob: i trzymamy w pamięci podręcznej.
         const avatarBlobUrls = new Map();
         function avatarDisplaySrc(src) {
             if (!src || src.length <= 100000 || typeof URL?.createObjectURL !== 'function') return src;
@@ -1599,6 +1649,19 @@
             window['_last' + key[0].toUpperCase() + key.slice(1)] = value;
         }
 
+        function sanitizeWordSnap(snap) {
+            if (!snap || typeof snap !== 'object') return null;
+            const id = typeof snap.id === 'string' && ROOM_WORD_ID.test(snap.id) ? snap.id : '';
+            const text = typeof snap.text === 'string' ? snap.text.trim().slice(0, 240) : '';
+            if (!id || !text) return null;
+            return {
+                id,
+                text,
+                category: typeof snap.category === 'string' && snap.category.trim() ? snap.category.trim().slice(0, 80) : '😎 Osoba / Ekipa',
+                author: typeof snap.author === 'string' && snap.author.trim() ? snap.author.trim().slice(0, 80) : 'Ekipa'
+            };
+        }
+
         function resetRoomState() {
             clearInterval(roomPulseTimer);
             clearInterval(preCountdownInterval);
@@ -1629,6 +1692,7 @@
             incomingAvatars.clear();
             completedAvatars.clear();
             departedPlayers.clear();
+            remoteJudgeCooldowns.clear();
             roomScoreOverrides = {};
             roomStateVersion = 0;
             roomStateDirty = false;
@@ -1637,7 +1701,7 @@
             currentActiveWord = null;
             roundHistory = [];
             currentRoundNetPoints = 0;
-            Object.assign(myPlayer, { score: 0, guessedCount: 0, passedCount: 0, isPlayingNow: false, currentWordId: null });
+            Object.assign(myPlayer, { score: 0, guessedCount: 0, passedCount: 0, isPlayingNow: false, currentWordId: null, currentWordSnap: null });
             if (typeof resetGameRoomState === 'function') resetGameRoomState();
             for (const id of ['overlay-countdown', 'overlay-active-game', 'overlay-summary', 'modal-import', 'modal-vip-access', 'modal-delete-room']) {
                 const overlay = document.getElementById(id);
@@ -1865,7 +1929,8 @@
                 guessedCount: player.guessedCount,
                 passedCount: player.passedCount,
                 isPlayingNow: player.isPlayingNow,
-                currentWordId: player.currentWordId || null
+                currentWordId: player.currentWordId || null,
+                currentWordSnap: sanitizeWordSnap(player.currentWordSnap)
             };
             if (includeAvatar) fields.avatarImg = player.avatarImg || null;
             return fields;
@@ -1875,8 +1940,6 @@
             return typeof src === 'string' && src.length > AVATAR_INLINE_MAX;
         }
 
-        // Krótki identyfikator zawartości awatara – ten sam awatar zawsze ma to samo ID,
-        // więc kilka nakładających się wysyłek składa się w jedną całość.
         let avatarIdCache = { src: null, id: '' };
         function avatarContentId(src) {
             if (avatarIdCache.src === src) return avatarIdCache.id;
@@ -1910,7 +1973,6 @@
             sendNext();
         }
 
-        // Wysyła mój profil. Mały awatar leci razem z profilem, duży (GIF) – w osobnych paczkach zaraz po nim.
         function sendOwnProfile(targetId = '') {
             const big = isBigAvatar(myPlayer.avatarImg);
             const fields = { player: publicRoomPlayer(myPlayer, !big) };
@@ -1960,6 +2022,10 @@
             if (!nick) return false;
             const existing = roomPlayers[id];
             const avatarImg = source.avatarImg;
+            const currentWordId = typeof source.currentWordId === 'string' && ROOM_WORD_ID.test(source.currentWordId) ? source.currentWordId : null;
+            const currentWordSnap = currentWordId
+                ? (sanitizeWordSnap(source.currentWordSnap) || (existing?.currentWordSnap?.id === currentWordId ? existing.currentWordSnap : null))
+                : null;
             roomPlayers[id] = {
                 id, nick,
                 avatar: AVATARS.includes(source.avatar) ? source.avatar : AVATARS[0],
@@ -1968,7 +2034,8 @@
                     : typeof avatarImg === 'string' && avatarImg.length <= 720000 && /^data:image\/(?:jpeg|png|webp|gif);base64,[a-z0-9+/]+=*$/i.test(avatarImg) ? avatarImg : null,
                 ...roomPlayerStats(source),
                 isPlayingNow: source.isPlayingNow === true,
-                currentWordId: typeof source.currentWordId === 'string' && ROOM_WORD_ID.test(source.currentWordId) ? source.currentWordId : null,
+                currentWordId,
+                currentWordSnap,
                 lastSeen: Math.max(existing?.lastSeen || 0, lastSeen)
             };
             return true;
@@ -2011,7 +2078,6 @@
             const now = Date.now();
             const players = Object.values(roomPlayers);
             if (now >= roomLeaseUntil) {
-                // Host mógł zachować tę sesję podczas rundy rozpoczętej po rozłączeniu.
                 verifyReturningRoom(roomConnection);
                 return false;
             }
@@ -2077,7 +2143,7 @@
             const isCurrentHost = message.senderId === roomHostId;
             const isSuccessor = !formerRoomHosts.has(message.senderId) && Array.isArray(message.formerHosts) && message.formerHosts.includes(roomHostId);
             if (!isCurrentHost && !isSuccessor) return;
-            if (message.senderId === myPlayer.id) return; // Własne zamknięcie kończymy po potwierdzeniu zapisu brokera.
+            if (message.senderId === myPlayer.id) return;
             leaveRoom(false);
             showToast('Host zamknął lobby.', 'warning');
         }
@@ -2193,7 +2259,7 @@
                     return;
                 }
                 if (!roomPlayers[senderId]) {
-                    const entrant = { ...profile, ...roomPlayerStats(), isPlayingNow: false, currentWordId: null };
+                    const entrant = { ...profile, ...roomPlayerStats(), isPlayingNow: false, currentWordId: null, currentWordSnap: null };
                     if (!putRoomPlayer(senderId, entrant)) return;
                 }
                 sendRoomEvent('ROOM_ADMIT', {
@@ -2215,7 +2281,10 @@
                 player.lastSeen = Date.now();
                 if (typeof message.playing === 'boolean' && player.isPlayingNow !== message.playing) {
                     player.isPlayingNow = message.playing;
-                    if (!message.playing) player.currentWordId = null;
+                    if (!message.playing) {
+                        player.currentWordId = null;
+                        player.currentWordSnap = null;
+                    }
                     scheduleRoomRender();
                     if (!message.playing) maintainRoomPresence();
                 }
@@ -2348,8 +2417,6 @@
             const fromHost = senderId === roomHostId;
             mergeRoomWords(incoming);
             mergeRoomHistory(incoming, fromHost);
-            // Zużycie hasła obowiązuje do końca "epoki" worka. Gdy host przetasuje worek (epoka+1),
-            // wszyscy czyszczą rejestr zużytych; wpisy ze starszych epok są ignorowane (nie ma już duchów z poprzednich rund).
             const incomingEpoch = Number.isSafeInteger(incoming.usedEpoch) && incoming.usedEpoch >= 0 ? incoming.usedEpoch : 0;
             applyUsedEpoch(incomingEpoch);
             if (incomingEpoch === usedEpoch && Array.isArray(incoming.usedIds)) {
@@ -2381,6 +2448,7 @@
                 sender.isPlayingNow = incoming.player.isPlayingNow === true;
                 sender.currentWordId = typeof incoming.player.currentWordId === 'string' && ROOM_WORD_ID.test(incoming.player.currentWordId)
                     ? incoming.player.currentWordId : null;
+                sender.currentWordSnap = sender.currentWordId ? sanitizeWordSnap(incoming.player.currentWordSnap) : null;
             }
             scheduleRoomRender();
         }
@@ -2388,7 +2456,12 @@
         function buildRoomState() {
             const state = {
                 version: ++roomStateVersion,
-                player: { ...roomPlayerStats(myPlayer), isPlayingNow: myPlayer.isPlayingNow, currentWordId: myPlayer.currentWordId || null },
+                player: {
+                    ...roomPlayerStats(myPlayer),
+                    isPlayingNow: myPlayer.isPlayingNow,
+                    currentWordId: myPlayer.currentWordId || null,
+                    currentWordSnap: myPlayer.currentWordId ? sanitizeWordSnap(myPlayer.currentWordSnap) : null
+                },
                 words: wordsPool,
                 usedIds: [...usedWordIds],
                 usedEpoch,
@@ -2428,28 +2501,32 @@
             if (!document.hidden && roomGeneration) pulseRoom();
         });
 
-        // --- ZAKŁADKI (4 PODSTRONY: GRAJ / BAZA HASEŁ / RANKINGI / ADMIN) ---
+        // --- ZAKŁADKI (5 PODSTRON: GRAJ / EKIPA LIVE / BAZA HASEŁ / RANKINGI / ADMIN) ---
         window.switchTab = function(tab) {
             currentTab = tab;
             const viewPlay = document.getElementById('view-play');
+            const viewSpectate = document.getElementById('view-spectate');
             const viewWords = document.getElementById('view-words');
             const viewRanking = document.getElementById('view-ranking');
             const viewAdmin = document.getElementById('view-admin');
 
             const btnPlay = document.getElementById('tab-btn-play');
+            const btnSpectate = document.getElementById('tab-btn-spectate');
             const btnWords = document.getElementById('tab-btn-words');
             const btnRanking = document.getElementById('tab-btn-ranking');
             const btnAdmin = document.getElementById('tab-btn-admin');
 
-            const activeBtn = 'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md';
-            const inactiveBtn = 'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white';
+            const activeBtn = 'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md';
+            const inactiveBtn = 'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-white';
 
             viewPlay.classList.toggle('hidden', tab !== 'play');
+            if (viewSpectate) viewSpectate.classList.toggle('hidden', tab !== 'spectate');
             viewWords.classList.toggle('hidden', tab !== 'words');
             viewRanking.classList.toggle('hidden', tab !== 'ranking');
             if (viewAdmin) viewAdmin.classList.toggle('hidden', tab !== 'admin');
 
             btnPlay.className = tab === 'play' ? activeBtn : inactiveBtn;
+            if (btnSpectate) btnSpectate.className = tab === 'spectate' ? activeBtn : inactiveBtn;
             btnWords.className = tab === 'words' ? activeBtn : inactiveBtn;
             btnRanking.className = tab === 'ranking' ? activeBtn : inactiveBtn;
             if (btnAdmin) btnAdmin.className = tab === 'admin' ? activeBtn : inactiveBtn;
@@ -2489,10 +2566,6 @@
             });
         };
 
-        // Klucz do wykrywania TEGO SAMEGO hasła: ignoruje tylko wielkość liter, polskie znaki, spacje i interpunkcję
-        // ("Sigma Boy" == "sigma  boy!" == "SIGMA-BOY"). Hasła PODOBNE, ale różne ("Sigma Boy" i "Sigma Boy (mem)",
-        // "Kebab" i "Kebab z kurczaka") mają różne klucze i mogą być w worku razem.
-        // Litery z innych alfabetów i emoji też się liczą – hasło złożone z samych emoji nie zlewa się z innymi.
         function wordDupKey(text) {
             const base = String(text || '')
                 .normalize('NFKC')
@@ -2539,8 +2612,6 @@
             showToast('Dodano! Ktoś z kolegów wylosuje to hasło (Ty go nie dostaniesz).', 'success');
         };
 
-        // Gotowa paczka haseł (TikTok / slang / szkoła-studia / popkultura, wiek ok. 16-22).
-        // Przycisk dorzuca za każdym razem 25 LOSOWYCH haseł, których jeszcze nie ma w worku.
         const TIKTOK_WORD_PACK_BATCH = 25;
         const TIKTOK_WORD_PACK = (() => {
             const groups = [
@@ -2639,7 +2710,6 @@
 
         window.clearAllWords = function() {
             wordsPool = [];
-            // Po wyczyszczeniu worka nowe hasła zaczynają "od zera" – nie dziedziczą statusu "odegrane" po starych.
             usedWordIds.clear();
             usedEpoch++;
             recentWordIds = [];
@@ -2723,7 +2793,7 @@
                     text,
                     category: typeof item.c === 'string' && item.c ? item.c.slice(0, 80) : '😎 Osoba / Ekipa',
                     author: typeof item.a === 'string' && item.a ? item.a.slice(0, 80) : myPlayer.nick,
-                    authorId: typeof item.aid === 'string' ? item.aid.slice(0, 80) : 'IMPORTED',
+                    authorId: typeof item.aid === 'string' && item.aid ? item.aid.slice(0, 80) : 'IMPORTED',
                     authorNick: typeof item.an === 'string' ? item.an.slice(0, 40).toLowerCase() : ''
                 });
                 imported++;
@@ -2889,8 +2959,6 @@
                 || Boolean(word.authorNick && word.authorNick === player.nick?.toLowerCase());
         }
 
-        // Kontekst losowania dla jednego gracza: które hasła są wolne, zajęte (na czyimś czole) i dozwolone dla niego.
-        // "Takie samo" hasło = ten sam klucz (patrz wordDupKey), więc identyczne hasła nigdy nie wypadną dwa razy w jednym worku.
         function buildDrawContext(player) {
             const blockOwn = roomRules.blockOwnWords !== false;
             const onForeheads = new Set();
@@ -2940,8 +3008,6 @@
                 return;
             }
 
-            // Wyczerpana pula NIE blokuje startu – host automatycznie tasuje worek od nowa.
-            // Blokujemy tylko wtedy, gdy w całym worku są wyłącznie hasła dodane przez tego gracza.
             const blockOwnRule = roomRules.blockOwnWords !== false;
             if (blockOwnRule && wordsPool.every(w => isWordCreatedBy(w, myPlayer))) {
                 showToast('W worku są tylko Twoje własne hasła! Niech ktoś dopisze swoje albo kliknij „+25 losowych haseł”.', 'warning');
@@ -2985,6 +3051,7 @@
             currentActiveWord = null;
             myPlayer.isPlayingNow = false;
             myPlayer.currentWordId = null;
+            myPlayer.currentWordSnap = null;
             broadcastRoomState();
             document.getElementById('overlay-countdown').classList.add('hidden');
             document.getElementById('overlay-countdown').classList.remove('flex');
@@ -3034,7 +3101,6 @@
             isWaitingForNextWord = false;
         }
 
-        // Losowanie niezależne od kryptograficznie słabego Math.random – bez obciążenia modulo
         function randomIndex(n) {
             if (n <= 1) return 0;
             const buf = new Uint32Array(1);
@@ -3043,7 +3109,6 @@
             return buf[0] % n;
         }
 
-        // Przetasowanie worka: wszystkie hasła wracają do puli (poza tymi, które akurat ktoś ma na czole)
         function startNewShuffleCycle() {
             const inPlay = Object.values(roomPlayers)
                 .filter(member => member.isPlayingNow && member.currentWordId)
@@ -3062,12 +3127,6 @@
             showToast('🔄 Worek przetasowany od nowa – wszystkie hasła wróciły do puli!', 'success');
         };
 
-        // Host jest jedynym źródłem prawdy. Zwraca { word, reason, cycled }.
-        // Zasady:
-        //  1) hasło wypada dopiero wtedy, gdy nie było jeszcze losowane w tym worku (i nikt go nie ma na czole),
-        //  2) gdy w worku nie ma już ŻADNEGO wolnego hasła – worek tasuje się sam i każde hasło znów jest do wzięcia,
-        //  3) gdy dla tego gracza zostały tylko jego własne hasła – dostaje komunikat (nie dajemy powtórek cudzych),
-        //  4) ten sam gracz nigdy nie dostaje dwa razy z rzędu tego samego hasła, a po przetasowaniu nie wraca to, co wypadło tuż przed.
         function drawRoomWord(player) {
             if (!wordsPool.length) return { word: null, reason: 'empty', cycled: false };
             let ctx = buildDrawContext(player);
@@ -3077,8 +3136,6 @@
             let fresh = wordsPool.filter(word => ctx.isFree(word) && ctx.mayHave(word));
             let cycled = false;
             if (!fresh.length && !wordsPool.some(ctx.isFree)) {
-                // Worek się skończył. Tasujemy tylko wtedy, gdy po tasowaniu da się wylosować coś INNEGO niż ostatnio
-                // (przy jednym jedynym haśle nie ma sensu pokazywać go w kółko).
                 const eligible = uniqueByKey(wordsPool.filter(word => ctx.mayHave(word) && !ctx.isBusy(word)), ctx.keys);
                 const recent = recentKeys();
                 if (eligible.some(word => ctx.keys.get(word.id) !== lastKey && !recent.has(ctx.keys.get(word.id)))) {
@@ -3126,6 +3183,8 @@
                     lastDrawReplyByPlayer.set(player.id, reply);
                     if (drawn.cycled) showToast('🔄 Worek się skończył – tasujemy hasła od nowa!', 'info');
                     if (reply.word) {
+                        player.currentWordId = reply.word.id;
+                        player.currentWordSnap = sanitizeWordSnap(reply.word);
                         broadcastRoomState();
                         updateUI();
                     }
@@ -3138,14 +3197,53 @@
                     if (typeof word?.text !== 'string' || word.text.length > 240 || word.id !== roomWordId(word.text)) return;
                     if (!usedWordIds.has(word.id)) {
                         usedWordIds.add(word.id);
-                        scheduleRoomRender();
                     }
+                    if (roomPlayers[msg.targetId]) {
+                        roomPlayers[msg.targetId].currentWordId = word.id;
+                        roomPlayers[msg.targetId].currentWordSnap = sanitizeWordSnap(word);
+                    }
+                    scheduleRoomRender();
                 }
                 if (msg.targetId !== myPlayer.id || msg.requestId !== pendingWordDraw?.requestId) return;
                 cancelPendingWordDraw();
                 showReservedWord(word, msg.reason);
+            } else if (msg.type === 'GAME_REMOTE_VERDICT') {
+                // Inny gracz z zakładki "Ekipa Live" kliknął PAS / SIADŁO dla mojego aktualnego hasła
+                if (msg.targetId !== myPlayer.id || !myPlayer.isPlayingNow || isWaitingForNextWord || !currentActiveWord) return;
+                if (msg.wordId !== currentActiveWord.id) return;
+                if (msg.actionType !== 'correct' && msg.actionType !== 'pass') return;
+                const judgeNick = roomPlayers[msg.senderId]?.nick || 'Ekipa';
+                showToast(
+                    msg.actionType === 'correct'
+                        ? `🔥 ${judgeNick} zaznaczył(a): SIADŁO! (+1 pkt)`
+                        : `👎 ${judgeNick} zaznaczył(a): PAS! (-1 pkt)`,
+                    msg.actionType === 'correct' ? 'success' : 'warning'
+                );
+                handleWordAction(msg.actionType);
             }
         }
+
+        // Funkcja wywoływana z drugiej zakładki ("Ekipa Live"), gdy klikamy mniejszy przycisk PAS / SIADŁO u innego gracza
+        window.triggerRemoteWordAction = function(targetPlayerId, actionType) {
+            if (!targetPlayerId || targetPlayerId === myPlayer.id) return;
+            const target = roomPlayers[targetPlayerId];
+            if (!target || !target.isPlayingNow || !target.currentWordId) {
+                showToast('Ten gracz czeka teraz na kolejne hasło.', 'info');
+                return;
+            }
+            const lockKey = `${targetPlayerId}:${target.currentWordId}`;
+            const now = Date.now();
+            if ((remoteJudgeCooldowns.get(lockKey) || 0) > now) return;
+            remoteJudgeCooldowns.set(lockKey, now + 2600);
+
+            playSound(actionType === 'correct' ? 'correct' : 'pass');
+            sendRoomEvent('GAME_REMOTE_VERDICT', {
+                targetId: targetPlayerId,
+                wordId: target.currentWordId,
+                actionType
+            });
+            scheduleRoomRender();
+        };
 
         function pickNextRandomWord() {
             if (!myPlayer.isPlayingNow || pendingWordDraw) return;
@@ -3170,7 +3268,6 @@
                 showToast('Host nie odpowiedział na losowanie. Spróbuj zacząć rundę ponownie.', 'warning');
                 finishRound();
             }, 10000);
-            // to samo żądanie (to samo requestId) jest bezpieczne do powtórzenia – host odpowie tym samym hasłem
             const retry = setInterval(() => sendRoomEvent('GAME_DRAW_REQUEST', { requestId }), 1500);
             pendingWordDraw = { requestId, timeout, retry };
             sendRoomEvent('GAME_DRAW_REQUEST', { requestId });
@@ -3193,6 +3290,7 @@
             currentActiveWord = word;
             usedWordIds.add(word.id);
             myPlayer.currentWordId = word.id;
+            myPlayer.currentWordSnap = sanitizeWordSnap(word);
             broadcastRoomState();
 
             isWaitingForNextWord = false;
@@ -3206,6 +3304,7 @@
             document.getElementById('active-remaining-pool').textContent = freshLeft > 0
                 ? `Zostało dla Ciebie w puli: ${freshLeft}`
                 : 'Pula się kończy – za chwilę tasujemy od nowa 🔄';
+            scheduleRoomRender();
         }
 
         // PUNKTACJA: +1 za Zgadnięte (correct), -1 za PAS (pass) + 3 sekundy odliczania przed kolejnym hasłem
@@ -3224,6 +3323,7 @@
                 status: actionType
             });
             myPlayer.currentWordId = null;
+            myPlayer.currentWordSnap = null;
 
             if (actionType === 'correct') {
                 playSound('correct');
@@ -3254,13 +3354,11 @@
             document.getElementById('active-score-counter').textContent = sign;
 
             broadcastRoomState();
+            scheduleRoomRender();
 
             setTimeout(() => {
                 card.classList.remove('flash-correct', 'flash-pass');
             }, 260);
-
-            // Nie sprawdzamy już lokalnie, czy "coś zostało" – lokalny widok bywa nieaktualny i wcześniej
-            // potrafił zakończyć rundę po jednym haśle. O tym, czy jest hasło, decyduje wyłącznie host.
 
             // 3-sekundowe odliczanie przed pojawieniem się kolejnego unikalnego hasła
             let nextSec = 3;
@@ -3290,6 +3388,7 @@
             setActionButtonsDisabled(false);
             myPlayer.isPlayingNow = false;
             myPlayer.currentWordId = null;
+            myPlayer.currentWordSnap = null;
             currentActiveWord = null;
 
             document.getElementById('overlay-active-game').classList.add('hidden');
@@ -3340,6 +3439,168 @@
             updateUI();
         };
 
+        // Pobiera dane o aktualnym haśle innego gracza (z worka pokoju lub migawki przesłanej w stanie gracza)
+        function resolveOtherPlayerWord(player) {
+            if (!player || player.id === myPlayer.id || !player.isPlayingNow || !player.currentWordId) return null;
+            const fromPool = wordsPool.find(w => w.id === player.currentWordId);
+            if (fromPool) return fromPool;
+            if (player.currentWordSnap && player.currentWordSnap.id === player.currentWordId) {
+                return player.currentWordSnap;
+            }
+            return null;
+        }
+
+        // --- RENDEROWANIE ZAKŁADKI "EKIPA LIVE" (HASŁA WSZYSTKICH GRACZY POZA MOIM) ---
+        function renderSpectateView(playersArr) {
+            const spectateGrid = document.getElementById('spectate-cards-grid');
+            if (!spectateGrid) return;
+            spectateGrid.innerHTML = '';
+
+            // Wyświetlamy wszystkich graczy w pokoju OPRÓCZ mnie (moje hasło nigdy się tu nie pokazuje!)
+            const otherPlayers = playersArr
+                .filter(p => p.id !== myPlayer.id)
+                .sort((a, b) => {
+                    if (a.isPlayingNow !== b.isPlayingNow) return a.isPlayingNow ? -1 : 1;
+                    return (b.score || 0) - (a.score || 0);
+                });
+
+            if (otherPlayers.length === 0) {
+                spectateGrid.innerHTML = `
+                    <div class="col-span-full bg-slate-900/90 border border-slate-800 rounded-3xl p-8 text-center my-auto">
+                        <div class="w-16 h-16 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-3xl flex items-center justify-center mx-auto mb-3">
+                            <i class="fa-solid fa-user-group"></i>
+                        </div>
+                        <h3 class="font-display font-bold text-xl text-white">Czekamy na resztę ekipy w pokoju!</h3>
+                        <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                            Gdy znajomi dołączą kodem <b class="text-amber-300">${escapeHtml(currentRoomCode || '-----')}</b>, zobaczysz tutaj ich nicki oraz hasła na żywo (wszystkie oprócz Twojego!).
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            const now = Date.now();
+            otherPlayers.forEach(p => {
+                const scoreVal = p.score || 0;
+                const scoreColor = scoreVal > 0 ? 'text-emerald-400' : scoreVal < 0 ? 'text-rose-400' : 'text-slate-400';
+                const activeWord = resolveOtherPlayerWord(p);
+                const lockKey = p.currentWordId ? `${p.id}:${p.currentWordId}` : '';
+                const isCoolingDown = Boolean(lockKey && (remoteJudgeCooldowns.get(lockKey) || 0) > now);
+
+                const card = document.createElement('div');
+                card.className = `rounded-3xl p-4 sm:p-5 border-2 transition flex flex-col justify-between gap-4 shadow-xl ${
+                    p.isPlayingNow
+                        ? 'bg-gradient-to-br from-slate-900 via-indigo-950/75 to-slate-900 border-indigo-500/70 shadow-indigo-950/50'
+                        : 'bg-slate-900/85 border-slate-800/90 opacity-85'
+                }`;
+
+                let wordSectionHtml = '';
+                let controlsHtml = '';
+
+                if (p.isPlayingNow && activeWord) {
+                    wordSectionHtml = `
+                        <div class="bg-slate-950/90 border-2 border-indigo-500/50 rounded-2xl p-4 sm:p-5 text-center relative overflow-hidden">
+                            <div class="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                                <span class="px-2.5 py-0.5 rounded-lg bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 font-extrabold text-[11px] uppercase tracking-wider">
+                                    ${escapeHtml(activeWord.category || '😎 Osoba / Ekipa')}
+                                </span>
+                                <span class="px-2.5 py-0.5 rounded-lg bg-pink-500/15 border border-pink-400/30 text-pink-200 font-bold text-[11px]">
+                                    ✍️ Wymyślił(a): <b class="text-white">${escapeHtml(activeWord.author || 'Ekipa')}</b>
+                                </span>
+                            </div>
+
+                            <div class="font-display font-bold text-2xl sm:text-4xl text-white uppercase tracking-wide break-words leading-tight py-2 drop-shadow">
+                                ${escapeHtml(activeWord.text)}
+                            </div>
+                        </div>
+                    `;
+
+                    // Mniejsze, kompaktowe przyciski PAS / SIADŁO chroniące przed missclickiem
+                    controlsHtml = `
+                        <div class="flex items-center justify-between gap-2 pt-1">
+                            <span class="text-[11px] text-slate-400 font-semibold">
+                                Oceń hasło gracza <b class="text-slate-200">${escapeHtml(p.nick)}</b>:
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <button type="button"
+                                    onclick="triggerRemoteWordAction('${p.id}', 'pass')"
+                                    ${isCoolingDown ? 'disabled' : ''}
+                                    class="px-3 py-1.5 rounded-xl bg-rose-600/85 hover:bg-rose-500 active:scale-95 text-white font-display font-bold text-xs border-b-2 border-rose-900 shadow-sm flex items-center gap-1.5 transition disabled:opacity-40 disabled:pointer-events-none">
+                                    <span>👎</span>
+                                    <span>PAS</span>
+                                    <span class="text-[10px] text-rose-200 font-sans font-extrabold">(-1)</span>
+                                </button>
+                                <button type="button"
+                                    onclick="triggerRemoteWordAction('${p.id}', 'correct')"
+                                    ${isCoolingDown ? 'disabled' : ''}
+                                    class="px-3 py-1.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 active:scale-95 text-white font-display font-bold text-xs border-b-2 border-emerald-900 shadow-sm flex items-center gap-1.5 transition disabled:opacity-40 disabled:pointer-events-none">
+                                    <span>🔥</span>
+                                    <span>SIADŁO!</span>
+                                    <span class="text-[10px] text-emerald-100 font-sans font-extrabold">(+1)</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else if (p.isPlayingNow && !activeWord) {
+                    wordSectionHtml = `
+                        <div class="bg-slate-950/80 border border-amber-400/40 rounded-2xl p-5 text-center">
+                            <div class="text-xs font-extrabold uppercase tracking-wider text-amber-300 mb-1">⏳ Odliczanie na czole...</div>
+                            <div class="font-display font-bold text-lg text-white">Za sekundę wpadnie nowe hasło!</div>
+                        </div>
+                    `;
+                    controlsHtml = `
+                        <div class="flex items-center justify-end gap-2 opacity-40 pointer-events-none">
+                            <span class="text-[11px] text-slate-400 mr-auto">Przyciski aktywują się po wylosowaniu hasła</span>
+                            <button type="button" disabled class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-400 font-display font-bold text-xs">👎 PAS</button>
+                            <button type="button" disabled class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-400 font-display font-bold text-xs">🔥 SIADŁO!</button>
+                        </div>
+                    `;
+                } else {
+                    wordSectionHtml = `
+                        <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-5 text-center">
+                            <div class="text-xs font-bold text-slate-400">Gracz jest teraz w lobby</div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Gdy zacznie rundę na czole, tutaj od razu pojawi się jego hasło oraz kto je wymyślił.</div>
+                        </div>
+                    `;
+                    controlsHtml = `
+                        <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                            <span>Zgadnięte: <b class="text-emerald-400">${p.guessedCount || 0}</b> • Pas: <b class="text-rose-400">${p.passedCount || 0}</b></span>
+                            <span class="text-slate-400">Czeka na swoją kolej</span>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            ${renderPlayerAvatarBadge(p, 'w-11 h-11 text-2xl')}
+                            <div class="truncate">
+                                <div class="font-display font-bold text-base sm:text-lg text-white truncate flex items-center gap-1.5">
+                                    <span>${escapeHtml(p.nick || 'Gracz')}</span>
+                                    ${p.id === roomHostId ? '<span class="text-[9px] bg-amber-500/25 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">HOST</span>' : ''}
+                                </div>
+                                <div class="text-xs font-bold ${scoreColor}">
+                                    ⭐ ${scoreVal > 0 ? '+' + scoreVal : scoreVal} pkt
+                                </div>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold shrink-0 ${
+                            p.isPlayingNow
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40 animate-pulse'
+                                : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        }">
+                            ${p.isPlayingNow ? '📱 Gra na czole!' : 'W lobby'}
+                        </span>
+                    </div>
+
+                    ${wordSectionHtml}
+                    ${controlsHtml}
+                `;
+
+                spectateGrid.appendChild(card);
+            });
+        }
+
         // --- RENDEROWANIE LISTY GRACZY, WORKA HASEŁ ORAZ PODSTRONY RANKINGÓW ---
         function updateUI() {
             const total = wordsPool.length;
@@ -3347,8 +3608,16 @@
             const used = usedWordIds.size;
             const guessedEvents = roomGuessedFeed.filter(e => e.status === 'correct');
 
+            const playersArr = Object.values(roomPlayers).sort((a, b) => (b.score || 0) - (a.score || 0));
+            const otherActivePlayingCount = playersArr.filter(p => p.id !== myPlayer.id && p.isPlayingNow).length;
+            const otherTotalCount = Math.max(0, playersArr.length - 1);
+
             document.getElementById('nav-word-count').textContent = total;
             document.getElementById('nav-guessed-count').textContent = guessedEvents.length;
+            const navSpectateEl = document.getElementById('nav-spectate-count');
+            if (navSpectateEl) {
+                navSpectateEl.textContent = otherActivePlayingCount > 0 ? `${otherActivePlayingCount} gra` : otherTotalCount;
+            }
             document.getElementById('ranking-guessed-total').textContent = guessedEvents.length;
             document.getElementById('list-total-count').textContent = total;
             document.getElementById('stat-available-words').textContent = availableForMe;
@@ -3375,7 +3644,6 @@
             }
 
             // Renderowanie Ekipy w Lobby + Licznik LIVE
-            const playersArr = Object.values(roomPlayers).sort((a, b) => (b.score || 0) - (a.score || 0));
             const onlineCount = playersArr.length;
             document.getElementById('players-online-count').textContent = `${onlineCount} online`;
             document.getElementById('header-live-count').textContent = onlineCount;
@@ -3424,10 +3692,18 @@
             if (someoneElsePlaying) {
                 liveBanner.classList.remove('hidden');
                 liveBanner.classList.add('flex');
-                document.getElementById('live-player-banner-text').textContent = `${someoneElsePlaying.nick} trzyma teraz telefon na czole – podpowiadajcie!`;
+                const activeWordObj = resolveOtherPlayerWord(someoneElsePlaying);
+                document.getElementById('live-player-banner-text').textContent = activeWordObj
+                    ? `${someoneElsePlaying.nick} ma na czole: „${activeWordObj.text}” (od: ${activeWordObj.author || 'Ekipa'})`
+                    : `${someoneElsePlaying.nick} trzyma teraz telefon na czole – podpowiadajcie!`;
             } else {
                 liveBanner.classList.add('hidden');
                 liveBanner.classList.remove('flex');
+            }
+
+            // Renderowanie zakładki Ekipa Live (hasła wszystkich oprócz mojego)
+            if (currentTab === 'spectate') {
+                renderSpectateView(playersArr);
             }
 
             // Renderowanie Podstrony 3: RANKING GRACZY (Kto ma najwięcej punktów wygrywa!)
