@@ -2,14 +2,15 @@
 <html lang="pl" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CZÓŁKO.IO - Imprezowa Gra Ekipy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#100d24">
+    <title>CZÓŁKO.IO v12 - Imprezowa Gra Ekipy</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- MQTT.js (Darmowy przekaźnik Live WebSockets dla GitHub Pages - działa na 6+ telefonach bez konfiguracji!) -->
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script defer src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <!-- Google Fonts: Fredoka & Outfit -->
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -80,30 +81,126 @@
             background: linear-gradient(135deg, rgba(136, 19, 55, 0.95), rgba(190, 18, 60, 0.9)) !important;
         }
 
-        /* Idealne dopasowanie dla trzymania telefonu PIONOWO jak i POZIOMO (Landscape) */
+        :is(button, input, textarea):focus-visible,
+        #screen-lobby-auth :is(button, input):focus-visible,
+        #custom-avatar-upload:focus-visible + label {
+            outline: 2px solid #c4b5fd;
+            outline-offset: 3px;
+        }
+        #toast-container { top: max(1rem, env(safe-area-inset-top)); }
+        #screen-lobby-auth {
+            padding: max(0.75rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+                max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+            overscroll-behavior: contain;
+            background-color: #100d24;
+            background-image:
+                radial-gradient(circle, #a594fb26 1px, transparent 1.5px),
+                radial-gradient(ellipse at 16% 8%, #422b7f 0%, transparent 62%),
+                radial-gradient(ellipse at 84% 85%, #582153 0%, transparent 58%);
+            background-size: 22px 22px, auto, auto;
+        }
+        .auth-hero { padding: clamp(0.6rem, 2vh, 1rem) 0 1rem; }
+        .auth-panel {
+            background: #17132e;
+            border: 1px solid #665390;
+            box-shadow: 0 5px 0 #0c091e, 0 18px 48px #07051560;
+        }
+        #avatar-picker {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            justify-items: center;
+        }
+        #avatar-picker button { width: 100%; height: 2.5rem; }
+        #player-nick-input { font-size: 1rem; }
+        #enter-room-button:disabled { opacity: 0.7; cursor: wait; }
+        #app-header { padding-top: env(safe-area-inset-top); }
+        .room-header-inner,
+        .room-content {
+            padding-left: max(0.75rem, env(safe-area-inset-left));
+            padding-right: max(0.75rem, env(safe-area-inset-right));
+        }
+        main.room-content { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+        #app-header nav button { min-width: 0; min-height: 2.75rem; }
+        .lobby-players {
+            border-color: #454066;
+            background: linear-gradient(125deg, #211a3d, #111827 65%);
+        }
+        #overlay-active-game,
+        #overlay-countdown,
+        #overlay-summary {
+            padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+                max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+            overscroll-behavior: contain;
+        }
+        #overlay-active-game { gap: clamp(0.4rem, 1.5vh, 1rem); overflow-y: auto; }
+        .round-toolbar {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            grid-template-areas: "category timer tools";
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .round-category { grid-area: category; min-width: 0; }
+        #active-word-category, #active-word-author { min-width: 0; }
+        #active-timer-box { grid-area: timer; justify-self: end; white-space: nowrap; }
+        .round-tools { grid-area: tools; justify-self: end; }
+        .round-tools button { min-height: 2.75rem; }
+        .round-word-area { min-height: clamp(9rem, 38vh, 18rem); }
+        #forehead-word-card { min-height: clamp(9rem, 38vh, 18rem); }
+        #active-word-text {
+            max-width: 100%;
+            font-size: clamp(1.85rem, 6.5vw, 4.75rem);
+            overflow-wrap: anywhere;
+        }
+        #active-action-buttons {
+            flex-shrink: 0;
+            height: clamp(4rem, 17vh, 8.5rem);
+        }
+        @media (max-width: 560px) and (orientation: portrait) {
+            .round-toolbar {
+                grid-template-columns: minmax(0, 1fr) auto;
+                grid-template-areas: "category timer" "tools tools";
+            }
+            .round-tools { width: 100%; }
+            .round-tools > div { margin-right: auto; }
+        }
+        @media (max-width: 380px) {
+            #app-header nav button { padding-inline: 0.5rem; }
+            #app-header nav button > i { display: none; }
+            #active-action-buttons .round-action-icon { display: none; }
+        }
         @media (orientation: landscape) and (max-height: 540px) {
-            #overlay-active-game {
-                padding: 0.5rem 1rem !important;
+            #overlay-active-game, #overlay-countdown { padding-block: max(0.4rem, env(safe-area-inset-top)) max(0.4rem, env(safe-area-inset-bottom)); }
+            .round-word-area, #forehead-word-card { min-height: 6.5rem; }
+            #forehead-word-card { padding: 0.65rem 1.25rem; border-radius: 1.5rem; }
+            #active-word-text { font-size: clamp(1.65rem, 5.5vw, 3.5rem); }
+            #active-remaining-pool { margin-top: 0.4rem; }
+            #active-action-buttons { height: clamp(3.25rem, 18vh, 5rem); }
+            #overlay-countdown .countdown-content {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                grid-template-areas: "warning number" "title number" "copy number" "cancel number";
+                align-items: center;
+                justify-items: start;
+                max-width: 36rem;
+                gap: 0.4rem 1rem;
+                text-align: left;
             }
-            #forehead-word-card {
-                min-height: 115px !important;
-                padding: 0.75rem 1.25rem !important;
-                border-radius: 1.5rem !important;
-            }
-            #active-word-text {
-                font-size: clamp(1.75rem, 6vw, 3.25rem) !important;
-            }
-            #active-action-buttons {
-                height: 4.5rem !important;
-            }
-            #overlay-countdown h2 {
-                font-size: 1.75rem !important;
-            }
+            #overlay-countdown .countdown-icon { display: none; }
+            #overlay-countdown .countdown-warning { grid-area: warning; margin: 0; }
+            #overlay-countdown .countdown-title { grid-area: title; margin: 0; font-size: clamp(1.35rem, 4.5vw, 2.25rem); }
+            #overlay-countdown .countdown-copy { grid-area: copy; margin: 0; }
+            #overlay-countdown .countdown-cancel { grid-area: cancel; margin: 0; padding-inline: 0; }
             #pre-countdown-number {
-                width: 6.5rem !important;
-                height: 6.5rem !important;
-                font-size: 3.5rem !important;
+                grid-area: number;
+                width: clamp(5.5rem, 26vh, 8rem);
+                height: clamp(5.5rem, 26vh, 8rem);
+                font-size: 3.5rem;
             }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #screen-lobby-auth *, #overlay-countdown *, .lobby-players *,
+            #live-player-banner, .forehead-card { animation: none !important; transition: none !important; }
         }
     </style>
 </head>
@@ -113,15 +210,15 @@
     <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 w-11/12 max-w-md pointer-events-none"></div>
 
     <!-- ========================================================================= -->
-    <!-- EKRAN POWITALNY (DWUETAPOWY: 1. LOGOWANIE / KONTO -> 2. KOD POKOJU)       -->
+    <!-- EKRAN POWITALNY (1. SZYBKIE LOGOWANIE -> 2. KOD POKOJU)                   -->
     <!-- ========================================================================= -->
-    <div id="screen-lobby-auth" class="fixed inset-0 z-40 party-bg flex flex-col items-center justify-center p-4 overflow-y-auto">
+    <div id="screen-lobby-auth" class="fixed inset-0 z-40 party-bg flex flex-col items-center overflow-y-auto">
         
-        <!-- Górny Pasek nad logowaniem: Licznik Gracze LIVE (v11) + Pełny Ekran -->
-        <div class="w-full max-w-md flex items-center justify-between mb-3 px-1">
-            <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3.5 py-1.5 rounded-full shadow-lg">
+        <!-- Pasek nad logowaniem -->
+        <div class="w-full max-w-md flex items-center justify-between gap-2 shrink-0 px-1">
+            <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-full shadow-lg">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                <span class="text-[11px] font-bold text-slate-200">Gracze LIVE <span class="text-indigo-400 font-extrabold">(v11)</span>: <b id="global-live-counter" class="text-emerald-400">1</b></span>
+                <span class="text-[11px] font-bold text-slate-300">Gracze w pokoju <b id="global-live-counter" class="ml-1 text-emerald-300">0</b></span>
             </div>
             <div class="flex items-center gap-2">
                 <button type="button" onclick="toggleFullScreen()" class="bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition active:scale-95">
@@ -131,94 +228,61 @@
             </div>
         </div>
 
-        <div class="w-full max-w-md my-auto pb-4">
+        <div class="w-full max-w-md my-auto shrink-0">
             
-            <!-- Logo Gry (bez numeru wersji przy tytule) -->
-            <div class="text-center mb-4">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 shadow-2xl shadow-purple-500/40 mb-2 animate-float border-2 border-white/20">
-                    <i class="fa-solid fa-mobile-screen-button text-3xl text-white transform -rotate-90"></i>
+            <!-- Logo Gry -->
+            <div class="auth-hero text-center">
+                <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+                    <span class="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 border-2 border-white/25 shadow-lg shadow-purple-950/50 -rotate-6" aria-hidden="true">
+                        <i class="fa-solid fa-mobile-screen-button text-xl text-white -rotate-90"></i>
+                    </span>
+                    <h1 class="font-display font-bold text-4xl sm:text-5xl tracking-wide text-white">CZÓŁKO<span class="text-pink-300">.IO</span></h1>
+                    <span class="text-[11px] font-extrabold bg-indigo-300 text-indigo-950 px-2 py-0.5 rounded-full">v12</span>
                 </div>
-                <h1 class="font-display font-bold text-4xl tracking-wider bg-gradient-to-r from-white via-indigo-200 to-pink-300 bg-clip-text text-transparent">
-                    CZÓŁKO<span class="text-pink-500">.IO</span>
-                </h1>
-                <p class="text-xs text-slate-400 font-medium">Imprezowe Czółko na żywo z własnymi hasłami</p>
+                <p class="mt-1.5 text-xs text-indigo-100/80 font-medium">Imprezowa gra na telefon dla całej ekipy</p>
             </div>
 
             <!-- =============================================================== -->
-            <!-- ETAP 1: NOWE MENU LOGOWANIA (Nick + Zdjęcie / Animowany GIF)    -->
+            <!-- ETAP 1: SZYBKIE LOGOWANIE                                     -->
             <!-- =============================================================== -->
-            <div id="auth-step-1" class="bg-slate-900/95 backdrop-blur-xl border-2 border-indigo-500/30 rounded-[2rem] p-5 sm:p-6 shadow-2xl space-y-5 animate-pop">
-                
-                <!-- Nagłówek karty logowania -->
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3.5">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-lg">
-                            <i class="fa-solid fa-right-to-bracket"></i>
-                        </div>
-                        <div>
-                            <h2 id="step1-header-title" class="font-display font-bold text-2xl text-white leading-none">Logowanie</h2>
-                            <span class="text-xs text-slate-400">Ustaw swój wygląd i nazwę w ekipie</span>
-                        </div>
-                    </div>
+            <div id="auth-step-1" class="auth-panel rounded-[2rem] p-4 sm:p-6 space-y-4 animate-pop">
+                <div>
+                    <span class="text-[10px] font-extrabold uppercase tracking-widest text-indigo-300 block">1 / 2 • Profil</span>
+                    <h2 class="font-display font-bold text-2xl text-white">Jak Cię wołać?</h2>
                 </div>
 
-                <!-- Centralny Podgląd Profilowego (Zdjęcie / GIF / Emoji) -->
-                <div class="bg-slate-950/90 border border-slate-800/90 rounded-2xl p-4 flex flex-col gap-3">
-                    <div class="flex items-center gap-4">
-                        <div class="relative group shrink-0">
-                            <div id="auth-avatar-preview" class="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-pink-500 border-2 border-white/30 flex items-center justify-center text-4xl overflow-hidden shadow-xl">
-                                😎
-                            </div>
-                            <label for="custom-avatar-upload" class="cursor-pointer absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl bg-pink-600 hover:bg-pink-500 text-white border-2 border-slate-950 flex items-center justify-center text-xs shadow-lg transition active:scale-90" title="Wgraj zdjęcie lub animowany GIF">
-                                <i class="fa-solid fa-camera"></i>
+                <div>
+                    <label for="player-nick-input" class="text-sm font-bold text-slate-200 block mb-1.5">Twój nick</label>
+                    <input type="text" id="player-nick-input" maxlength="14" placeholder="Np. Antonio" autocomplete="nickname" enterkeyhint="next"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault(); proceedToRoomStep();}"
+                        class="w-full min-h-12 bg-slate-950/75 border-2 border-indigo-400/40 focus:border-indigo-300 rounded-2xl px-4 py-3 text-white font-bold placeholder-slate-400 transition">
+                </div>
+
+                <fieldset class="min-w-0 rounded-2xl border border-indigo-400/20 bg-slate-950/45 p-3">
+                    <legend class="px-2 text-sm font-bold text-slate-200">Awatar <span class="ml-1 text-xs font-medium text-slate-400">opcjonalnie</span></legend>
+                    <div class="flex items-center gap-3">
+                        <div id="auth-avatar-preview" class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-pink-500 border-2 border-white/30 flex items-center justify-center text-3xl shrink-0 overflow-hidden shadow-lg">😎</div>
+                        <div class="min-w-0">
+                            <input type="file" id="custom-avatar-upload" accept="image/*,.gif" class="sr-only" aria-describedby="avatar-upload-hint" onchange="handleCustomAvatarUpload(event)">
+                            <label for="custom-avatar-upload" class="min-h-11 cursor-pointer inline-flex items-center gap-2 text-xs font-bold bg-pink-600/20 hover:bg-pink-600/30 text-pink-200 border border-pink-500/40 px-3 py-1.5 rounded-xl transition active:scale-95">
+                                <i class="fa-solid fa-camera" aria-hidden="true"></i> Wgraj zdjęcie lub GIF
                             </label>
                         </div>
-
-                        <div class="flex-1 min-w-0 space-y-2">
-                            <div class="text-xs font-bold text-slate-300">Zdjęcie profilowe lub GIF:</div>
-                            <div class="flex flex-wrap gap-2">
-                                <label for="custom-avatar-upload" class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold bg-gradient-to-r from-pink-600/30 to-indigo-600/30 hover:from-pink-600/50 hover:to-indigo-600/50 text-white border border-pink-500/40 px-3.5 py-2 rounded-xl transition active:scale-95 shadow-sm">
-                                    <i class="fa-solid fa-image text-pink-400"></i>
-                                    <span>Wgraj Zdjęcie / GIF</span>
-                                </label>
-                                <input type="file" id="custom-avatar-upload" accept="image/*,image/gif" class="hidden" onchange="handleCustomAvatarUpload(event)">
-                            </div>
-                            <p class="text-[11px] text-slate-400">Obsługuje zwykłe zdjęcia oraz ruchome GIF-y!</p>
-                        </div>
                     </div>
+                    <div id="avatar-picker" class="gap-1.5 mt-3" role="group" aria-label="Wybierz awatar emoji"></div>
+                    <p id="avatar-upload-hint" class="mt-2 text-[11px] text-slate-400">Animowany GIF do 96 KB i 512 × 512 px.</p>
+                </fieldset>
 
-                    <!-- Pasek szybkiego wyboru emotki -->
-                    <div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Albo wybierz gotową emotkę:</span>
-                        <div class="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-slate-800 overflow-x-auto no-scrollbar" id="avatar-picker"></div>
-                    </div>
-                </div>
-
-                <!-- Pole na Nazwę / Nick -->
-                <div>
-                    <label for="player-nick-input" class="text-xs font-bold uppercase tracking-wider text-slate-300 block mb-1.5">
-                        Twoja nazwa (Nick):
-                    </label>
-                    <div class="relative">
-                        <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400"></i>
-                        <input type="text" id="player-nick-input" maxlength="14" placeholder="Wpisz swój nick..." autocomplete="off"
-                            onkeydown="if(event.key==='Enter'){event.preventDefault(); proceedToRoomStep();}"
-                            class="w-full bg-slate-950 border-2 border-slate-800 focus:border-indigo-500 rounded-2xl pl-11 pr-4 py-3.5 text-white font-bold placeholder-slate-500 focus:outline-none transition text-base">
-                    </div>
-                </div>
-
-                <!-- Przycisk DALEJ -->
-                <button type="button" id="btn-login-next" onclick="proceedToRoomStep()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-display font-bold text-xl tracking-wide shadow-xl shadow-indigo-600/30 active:scale-[0.98] transition flex items-center justify-center gap-2 cursor-pointer">
-                    <span id="step1-submit-label">DALEJ</span>
-                    <i class="fa-solid fa-arrow-right"></i>
+                <button type="button" onclick="proceedToRoomStep()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-display font-bold text-lg shadow-lg shadow-indigo-600/30 active:scale-[0.98] transition flex items-center justify-center gap-2">
+                    <span>Dalej do pokoju</span>
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                 </button>
             </div>
-
 
             <!-- =============================================================== -->
             <!-- ETAP 2: OKIENKO KODU POKOJU (Pojawia się po kliknięciu DALEJ)   -->
             <!-- =============================================================== -->
-            <div id="auth-step-2" class="hidden bg-slate-900/95 backdrop-blur-xl border-2 border-slate-800 rounded-[2rem] p-5 sm:p-6 shadow-2xl space-y-5 animate-pop">
+            <div id="auth-step-2" class="hidden auth-panel rounded-[2rem] p-4 sm:p-6 space-y-4 animate-pop">
                 
                 <!-- Pasek zalogowanego gracza z możliwością cofnięcia -->
                 <div class="flex items-center justify-between bg-slate-950/90 border border-slate-800 rounded-2xl p-3">
@@ -240,8 +304,8 @@
 
                 <div class="space-y-4">
                     <div>
-                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-pink-400 block">KROK 2 Z 2 • POKÓJ GRY</span>
-                        <h2 class="font-display font-bold text-xl text-white">Wybierz pokój ekipy</h2>
+                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-pink-300 block">2 / 2 • Pokój</span>
+                        <h2 class="font-display font-bold text-2xl text-white">Zbierz ekipę</h2>
                     </div>
 
                     <!-- Przełącznik: Stwórz pokój vs Wpisz kod -->
@@ -259,12 +323,12 @@
                     <!-- Widok 1: Tworzenie pokoju (Host) -->
                     <div id="auth-box-create" class="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-3">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-bold">Kod Twojego pokoju:</span>
+                            <label for="create-room-code-input" class="text-xs text-slate-300 font-bold">Twój kod pokoju</label>
                             <button type="button" onclick="rollRandomRoomCode()" class="text-xs font-bold text-indigo-300 hover:text-white flex items-center gap-1.5 bg-indigo-500/20 px-3 py-1 rounded-xl border border-indigo-500/30 active:scale-95 transition">
                                 <i class="fa-solid fa-dice"></i> Losuj inny
                             </button>
                         </div>
-                        <input type="text" id="create-room-code-input" maxlength="5" 
+                        <input type="text" id="create-room-code-input" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go"
                             oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5)"
                             onkeydown="if(event.key==='Enter'){event.preventDefault(); enterPartyRoom();}"
                             class="w-full bg-slate-900 border-2 border-indigo-500/50 focus:border-indigo-400 rounded-xl py-3 px-4 text-center font-display font-bold text-3xl tracking-[0.3em] text-amber-300 uppercase focus:outline-none">
@@ -275,8 +339,8 @@
 
                     <!-- Widok 2: Dołączanie do pokoju -->
                     <div id="auth-box-join" class="hidden bg-slate-950/90 border border-slate-800 rounded-2xl p-4 space-y-3">
-                        <span class="text-xs text-slate-300 font-bold block text-center">Wpisz kod pokoju od znajomego:</span>
-                        <input type="text" id="join-room-code-input" maxlength="5" placeholder="KOD..."
+                        <label for="join-room-code-input" class="text-xs text-slate-300 font-bold block text-center">Kod od znajomego</label>
+                        <input type="text" id="join-room-code-input" maxlength="5" placeholder="KOD…" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go"
                             oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5)"
                             onkeydown="if(event.key==='Enter'){event.preventDefault(); enterPartyRoom();}"
                             class="w-full bg-slate-900 border-2 border-emerald-500/50 focus:border-emerald-400 rounded-xl py-3 px-4 text-center font-display font-bold text-3xl tracking-[0.3em] text-emerald-300 uppercase placeholder-slate-700 focus:outline-none">
@@ -287,7 +351,7 @@
                 </div>
 
                 <!-- Przycisk Wejścia do Gry -->
-                <button type="button" onclick="enterPartyRoom()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-white font-display font-bold text-xl tracking-wide shadow-xl shadow-emerald-600/30 active:scale-[0.98] transition flex items-center justify-center gap-2">
+                <button type="button" id="enter-room-button" onclick="enterPartyRoom()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-white font-display font-bold text-xl tracking-wide shadow-xl shadow-emerald-600/30 active:scale-[0.98] transition flex items-center justify-center gap-2">
                     <span id="step2-submit-label">GRAJ!</span>
                     <i class="fa-solid fa-play"></i>
                 </button>
@@ -301,24 +365,24 @@
     <!-- NAGŁÓWEK W POKOJU GRY (Z PRZYCISKIEM FULL SCREEN I 3 PODSTRONAMI)         -->
     <!-- ========================================================================= -->
     <header id="app-header" class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-30">
-        <div class="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div class="room-header-inner max-w-4xl mx-auto py-2.5 flex flex-wrap items-center justify-between gap-2">
             
             <!-- Info o Pokoju i Kodzie -->
             <div class="flex items-center gap-1.5 sm:gap-2">
                 <button onclick="copyRoomInvite()" class="group flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700/80 rounded-2xl px-2.5 py-1.5 transition" title="Kliknij, aby skopiować kod pokoju">
                     <div id="header-player-avatar-box" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center shadow-md overflow-hidden shrink-0">
-                        <span id="header-player-avatar" class="text-base sm:text-lg">😎</span>
+                        <span class="text-base sm:text-lg">😎</span>
                     </div>
                     <div class="text-left">
                         <div class="flex items-center gap-1">
-                            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">KOD:</span>
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Kod</span>
                             <span id="header-room-code" class="font-display font-bold text-sm sm:text-base text-amber-300 tracking-wider">-----</span>
                             <i class="fa-regular fa-copy text-[10px] text-slate-400 group-hover:text-white"></i>
                         </div>
                         <div class="flex items-center gap-1 text-[10px] text-slate-300 font-medium">
                             <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                             <span id="header-player-nick" class="truncate max-w-[75px]">Gracz</span>
-                            <span class="text-emerald-400 font-bold ml-0.5">• <span id="header-live-count">1</span> LIVE (v11)</span>
+                            <span class="text-emerald-400 font-bold ml-0.5">• <span id="header-live-count">1</span> gra</span>
                         </div>
                     </div>
                 </button>
@@ -328,11 +392,11 @@
                     <i class="fa-solid fa-expand" id="fullscreen-icon"></i>
                 </button>
 
-                <button onclick="openVipAccessModal()" id="vip-access-btn" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-indigo-950/80 text-amber-400 border border-slate-700/60 flex items-center justify-center text-sm transition" title="Zarządzaj dostępem VIP (Lista maili/loginów)">
+                <button onclick="openVipAccessModal()" id="vip-access-btn" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-indigo-950/80 text-amber-400 border border-slate-700/60 flex items-center justify-center text-sm transition" title="Zarządzaj listą nicków VIP">
                     <i class="fa-solid fa-user-lock"></i>
                 </button>
 
-                <button onclick="leaveRoom()" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-rose-950/80 text-slate-400 hover:text-rose-400 border border-slate-700/60 flex items-center justify-center text-sm transition" title="Zmień pokój / konto">
+                <button onclick="leaveRoom()" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-rose-950/80 text-slate-400 hover:text-rose-400 border border-slate-700/60 flex items-center justify-center text-sm transition" title="Opuść pokój">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
@@ -365,7 +429,7 @@
     <!-- ========================================================================= -->
     <!-- GŁÓWNA ZAWARTOŚĆ POKOJU                                                   -->
     <!-- ========================================================================= -->
-    <main class="flex-1 flex flex-col max-w-4xl w-full mx-auto p-4 sm:p-6 gap-5">
+    <main class="room-content flex-1 flex flex-col max-w-4xl w-full mx-auto py-4 sm:py-6 gap-5">
 
         <!-- POWIADOMIENIE LIVE: KTOŚ INNY Z EKIPY AKTUALNIE GRA NA CZOLE! -->
         <div id="live-player-banner" class="hidden bg-gradient-to-r from-amber-500/20 via-pink-500/20 to-indigo-500/20 border-2 border-amber-400/50 rounded-2xl p-3.5 items-center justify-between gap-3 animate-pulse">
@@ -383,22 +447,19 @@
         <!-- ========================================== -->
         <section id="view-play" class="flex-1 flex flex-col gap-5">
             
-            <!-- Pasek Ekipy Online (Gracze w pokoju + Licznik LIVE v11) -->
-            <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl">
+            <!-- Pasek Ekipy Online (Gracze w pokoju + Licznik LIVE) -->
+            <div class="lobby-players border rounded-3xl p-4 sm:p-5 shadow-xl">
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <div class="flex items-center gap-2">
-                        <span class="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-indigo-400">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                            Gracze LIVE <span class="text-pink-400">(v11)</span>:
-                        </span>
+                        <h2 class="font-display font-bold text-lg text-white">Ekipa w pokoju</h2>
                         <span id="players-online-count" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-extrabold px-2.5 py-0.5 rounded-full">1 online</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <button onclick="switchTab('ranking')" class="text-xs text-pink-400 hover:text-pink-300 font-bold flex items-center gap-1">
-                            <i class="fa-solid fa-ranking-star"></i> Pełny Ranking
+                            <i class="fa-solid fa-ranking-star" aria-hidden="true"></i> Ranking
                         </button>
                         <button onclick="copyRoomInvite()" class="text-xs text-amber-300 hover:text-amber-200 font-semibold flex items-center gap-1">
-                            <i class="fa-solid fa-copy"></i> Kod: <b id="invite-code-inline" class="underline">-----</b>
+                            <i class="fa-solid fa-copy" aria-hidden="true"></i> Kopiuj kod <b id="invite-code-inline" class="underline">-----</b>
                         </button>
                     </div>
                 </div>
@@ -472,22 +533,17 @@
                             </div>
                             <span class="host-only-badge text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">Host</span>
                         </label>
-                        <label class="flex items-center justify-between gap-2.5 bg-slate-950/60 px-3.5 py-2.5 rounded-xl border border-slate-800">
-                            <div class="flex items-center gap-2.5">
-                                <input type="checkbox" id="avoid-repeats-toggle" checked onchange="handleHostRuleChange()" class="w-4 h-4 rounded accent-indigo-500">
-                                <span class="text-xs text-slate-200 font-semibold">Usuwaj odgadnięte hasła z puli</span>
-                            </div>
-                            <span class="host-only-badge text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">Host</span>
-                        </label>
+                        <p class="flex items-center gap-2.5 bg-slate-950/60 px-3.5 py-2.5 rounded-xl border border-slate-800 text-xs text-slate-200 font-semibold">
+                            <i class="fa-solid fa-shuffle text-indigo-300" aria-hidden="true"></i>
+                            Każde hasło wypada z puli po pierwszym losowaniu.
+                        </p>
                     </div>
 
                     <div class="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
                         <span class="text-slate-400">
                             Kto ma najwięcej punktów wygrywa! <b class="text-emerald-400">+1 pkt SIADŁO</b> • <b class="text-rose-400">-1 pkt PAS</b>
                         </span>
-                        <button id="btn-reset-used-words" onclick="resetUsedWords()" class="text-pink-400 hover:text-pink-300 font-bold underline">
-                            Przywróć zużyte hasła (<span id="stat-used-words">0</span>)
-                        </button>
+                        <span class="text-pink-300 font-bold">Wylosowane w lobby <span id="stat-used-words">0</span></span>
                     </div>
                 </div>
             </div>
@@ -495,11 +551,11 @@
             <!-- Wielki Przycisk Startu Rundy -->
             <div class="mt-auto pt-1">
                 <button onclick="startPreGameCountdown()" class="w-full py-5 px-6 rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-display font-bold text-2xl sm:text-3xl tracking-wide shadow-2xl shadow-purple-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 border-2 border-white/15">
-                    <i class="fa-solid fa-dice-d20 text-2xl animate-spin" style="animation-duration: 6s;"></i>
-                    <span>BIORĘ TELEFON NA CZOŁO!</span>
+                    <i class="fa-solid fa-mobile-screen-button -rotate-90 text-2xl" aria-hidden="true"></i>
+                    <span>Zacznij rundę</span>
                 </button>
                 <p class="text-center text-xs text-slate-400 mt-2">
-                    Działa idealnie <b>pionowo i poziomo</b>! Masz 3 sekundy na przyłożenie telefonu do czoła.
+                    Po starcie masz 3 sekundy na przyłożenie telefonu do czoła.
                 </p>
             </div>
         </section>
@@ -674,14 +730,10 @@
                         </p>
                     </div>
 
-                    <!-- Przycisk odblokowania Admina (gdyby host odświeżył stronę lub wszedł z innego urządzenia) -->
-                    <button id="claim-host-btn" onclick="claimRoomHost()" class="hidden text-xs font-extrabold px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-md">
-                        <i class="fa-solid fa-crown mr-1"></i> Przejmij rolę Admina / Hosta
-                    </button>
                 </div>
 
-                <!-- Szybkie Akcje Administracyjne (Reset Rankingu, Reset Historii, Dostęp VIP) -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <!-- Szybkie akcje administratora -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <button onclick="adminResetAllScores()" class="admin-action-btn p-4 rounded-2xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-left transition flex flex-col justify-between gap-2 group">
                         <div class="flex items-center justify-between">
                             <span class="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center text-base">
@@ -704,7 +756,7 @@
                         </div>
                         <div>
                             <div class="font-display font-bold text-sm text-white">Wyczyść historię haseł</div>
-                            <div class="text-[11px] text-slate-400">Usuwa listę odgadniętych haseł i przywraca zużyte słowa.</div>
+                            <div class="text-[11px] text-slate-400">Usuwa listę odgadniętych haseł.</div>
                         </div>
                     </button>
 
@@ -717,7 +769,20 @@
                         </div>
                         <div>
                             <div class="font-display font-bold text-sm text-white">Lista VIP / Dostęp</div>
-                            <div class="text-[11px] text-slate-400">Wybierz kto może wejść do pokoju po loginie lub mailu.</div>
+                            <div class="text-[11px] text-slate-400">Wybierz nicki, które mogą wejść do pokoju.</div>
+                        </div>
+                    </button>
+
+                    <button id="delete-room-trigger-btn" type="button" onclick="openDeleteRoomModal()" class="admin-action-btn p-4 rounded-2xl bg-rose-950/50 hover:bg-rose-900/60 border border-rose-600/50 text-left transition flex flex-col justify-between gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <div class="flex items-center justify-between">
+                            <span class="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center text-base">
+                                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                            </span>
+                            <span class="text-[10px] font-extrabold uppercase text-rose-300 bg-rose-500/20 px-2 py-0.5 rounded">HOST</span>
+                        </div>
+                        <div>
+                            <div class="font-display font-bold text-sm text-white">Usuń lobby</div>
+                            <div class="text-[11px] text-slate-400">Zamknij pokój dla całej ekipy i utwórz nowe lobby.</div>
                         </div>
                     </button>
                 </div>
@@ -748,30 +813,30 @@
     <!-- ========================================================================= -->
     <!-- PEŁNOEKRANOWY EKRAN 1: 3 SEKUNDY OSTRZEŻENIA "PRZYŁÓŻ DO CZOŁA"           -->
     <!-- ========================================================================= -->
-    <div id="overlay-countdown" class="fixed inset-0 z-50 hidden bg-slate-950 flex-col items-center justify-center p-6 text-center no-select">
+    <div id="overlay-countdown" class="fixed inset-0 z-50 hidden bg-slate-950 flex-col items-center text-center no-select overflow-y-auto">
         <div class="absolute w-96 h-96 bg-indigo-600/25 rounded-full blur-3xl animate-pulse"></div>
         
-        <div class="relative z-10 max-w-md w-full flex flex-col items-center">
-            <div class="w-24 h-24 rounded-3xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300 text-5xl mb-5 animate-bounce shadow-xl shadow-amber-500/20">
+        <div class="countdown-content relative z-10 max-w-md w-full flex flex-col items-center shrink-0 my-auto">
+            <div class="countdown-icon w-20 h-20 rounded-3xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300 text-4xl mb-4 shadow-xl shadow-amber-500/20" aria-hidden="true">
                 <i class="fa-solid fa-mobile-screen-button transform -rotate-90"></i>
             </div>
 
-            <span class="px-4 py-1.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 font-extrabold text-xs uppercase tracking-widest mb-3">
+            <span class="countdown-warning px-4 py-1.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 font-extrabold text-xs uppercase tracking-widest mb-3">
                 🚨 NIE PODGLĄDAJ EKRANU! 🚨
             </span>
 
-            <h2 class="font-display font-bold text-3xl sm:text-5xl text-white mb-2 leading-tight">
+            <h2 class="countdown-title font-display font-bold text-3xl sm:text-5xl text-white mb-2 leading-tight">
                 PRZYŁÓŻ TELEFON DO CZOŁA!
             </h2>
-            <p class="text-slate-300 text-sm sm:text-base mb-8">
-                Odwróć ekran w stronę ekipy! Hasło wjedzie za:
+            <p class="countdown-copy text-slate-300 text-sm sm:text-base mb-5">
+                Skieruj ekran w stronę ekipy. Zaraz pojawi się hasło.
             </p>
 
             <div id="pre-countdown-number" class="w-40 h-40 sm:w-48 sm:h-48 rounded-[2.5rem] bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 border-4 border-white/30 flex items-center justify-center font-display font-bold text-8xl text-white shadow-2xl shadow-purple-500/50">
                 3
             </div>
 
-            <button onclick="abortGame()" class="mt-10 text-slate-400 hover:text-white text-sm font-bold underline py-2 px-4">
+            <button onclick="abortGame()" class="countdown-cancel mt-6 min-h-11 text-slate-300 hover:text-white text-sm font-bold underline py-2 px-4">
                 Anuluj start
             </button>
         </div>
@@ -781,30 +846,30 @@
     <!-- ========================================================================= -->
     <!-- PEŁNOEKRANOWY EKRAN 2: EKRAN GRY NA CZOLE (PIONOWO I POZIOMO)             -->
     <!-- ========================================================================= -->
-    <div id="overlay-active-game" class="fixed inset-0 z-50 hidden party-bg flex-col justify-between no-select overflow-hidden p-3 sm:p-6">
+    <div id="overlay-active-game" class="fixed inset-0 z-50 hidden party-bg flex-col no-select overflow-x-hidden">
         
         <!-- GÓRNY PASEK Z PASKIEM POSTĘPU CZASU -->
-        <div class="relative z-20 flex flex-col gap-2">
-            <div class="flex items-center justify-between bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl px-4 py-2.5 shadow-lg">
+        <div class="relative z-20 shrink-0">
+            <div class="round-toolbar bg-slate-900/95 border border-slate-700/80 rounded-2xl px-2.5 sm:px-4 py-2 shadow-lg">
                 
                 <!-- Kto gra + Kategoria + Autor hasła -->
-                <div class="flex items-center gap-2.5">
-                    <span id="active-word-category" class="px-3 py-1 rounded-xl bg-indigo-500/25 border border-indigo-400/40 text-indigo-200 font-extrabold text-xs sm:text-sm uppercase tracking-wider">
+                <div class="round-category flex items-center gap-2.5">
+                    <span id="active-word-category" class="truncate px-2.5 py-1 rounded-xl bg-indigo-500/25 border border-indigo-400/40 text-indigo-200 font-extrabold text-xs sm:text-sm uppercase tracking-wider">
                         🔥 TikTok / Gen-Z
                     </span>
-                    <span id="active-word-author" class="text-xs text-slate-300 font-semibold hidden sm:inline bg-slate-800 px-2.5 py-1 rounded-lg">
+                    <span id="active-word-author" class="truncate text-xs text-slate-300 font-semibold hidden lg:inline bg-slate-800 px-2.5 py-1 rounded-lg">
                         Od: Ekipa
                     </span>
                 </div>
 
                 <!-- Tryb Bez Limitu Czasu -->
-                <div id="active-timer-box" class="flex items-center gap-2 px-4 py-1 rounded-xl bg-slate-950 border border-indigo-400/40 font-display font-bold text-lg sm:text-xl text-indigo-300 shadow-inner">
+                <div id="active-timer-box" class="flex items-center gap-1.5 px-2.5 sm:px-4 py-1 rounded-xl bg-slate-950 border border-indigo-400/40 font-display font-bold text-sm sm:text-xl text-indigo-300 shadow-inner">
                     <i class="fa-solid fa-infinity text-sm text-indigo-400"></i>
                     <span id="active-timer-display">BEZ LIMITU</span>
                 </div>
 
                 <!-- Punktacja w rundzie + Fullscreen + Zakończ -->
-                <div class="flex items-center gap-2">
+                <div class="round-tools flex items-center gap-2">
                     <div class="px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-display font-bold text-base">
                         ⭐ <span id="active-score-counter">0</span>
                     </div>
@@ -820,7 +885,7 @@
         </div>
 
         <!-- ŚRODEK: EFEKTOWNA KARTA HASŁA -->
-        <div class="relative z-10 flex-1 flex items-center justify-center my-2 sm:my-4">
+        <div class="round-word-area relative z-10 flex-1 flex items-center justify-center">
             <div id="forehead-word-card" class="forehead-card w-full max-w-3xl min-h-[200px] sm:min-h-[260px] bg-gradient-to-br from-slate-900/95 via-indigo-950/90 to-slate-900/95 border-4 border-indigo-500/60 rounded-[2.5rem] p-6 sm:p-10 flex flex-col items-center justify-center text-center relative overflow-hidden">
                 
                 <i class="fa-solid fa-quote-right absolute -right-4 -bottom-6 text-8xl text-white/5 pointer-events-none"></i>
@@ -846,7 +911,7 @@
             <!-- LEWY KAFEL: PAS (-1 PUNKT) -->
             <button id="btn-action-pass" onclick="handleWordAction('pass')" class="h-full w-full rounded-3xl bg-gradient-to-br from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 active:scale-95 transition-all border-b-8 border-rose-900 shadow-xl shadow-rose-900/40 flex flex-col items-center justify-center p-3 text-white group focus:outline-none disabled:opacity-50 disabled:pointer-events-none">
                 <div class="flex items-center gap-2 sm:gap-3">
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-black/20 flex items-center justify-center text-2xl sm:text-3xl">
+                    <div class="round-action-icon w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-black/20 flex items-center justify-center text-2xl sm:text-3xl" aria-hidden="true">
                         👎
                     </div>
                     <div class="text-left">
@@ -863,7 +928,7 @@
                         <div class="font-display font-bold text-2xl sm:text-4xl leading-none tracking-wide">SIADŁO!</div>
                         <div class="text-[11px] sm:text-xs text-emerald-100 font-extrabold mt-1">+1 Punkt (Zgadnięte)</div>
                     </div>
-                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-black/20 flex items-center justify-center text-2xl sm:text-3xl">
+                    <div class="round-action-icon w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-black/20 flex items-center justify-center text-2xl sm:text-3xl" aria-hidden="true">
                         🔥
                     </div>
                 </div>
@@ -945,7 +1010,7 @@
         </div>
     </div>
 
-    <!-- MODAL AUTORYZACJI VIP (HOST MOŻE WPISAĆ MAILE/LOGINY DOPUSZCZONE DO GRY) -->
+    <!-- MODAL LISTY NICKÓW VIP -->
     <div id="modal-vip-access" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div class="flex items-center justify-between">
@@ -955,15 +1020,15 @@
                 <button onclick="closeVipAccessModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <p class="text-xs text-slate-400">
-                Możesz zostawić pokój otwarty dla każdego z kodem albo wpisać listę <b>loginów / maili</b> kolegów, którzy mają prawo wejść do tego pokoju.
+                Możesz zostawić pokój otwarty dla każdego z kodem albo wpisać listę <b>nicków</b> graczy.
             </p>
             <label class="flex items-center gap-2.5 cursor-pointer bg-slate-950 p-3 rounded-xl border border-slate-800">
                 <input type="checkbox" id="vip-whitelist-toggle" class="w-4 h-4 rounded accent-amber-500">
-                <span class="text-xs font-bold text-amber-300">Wymagaj zatwierdzonego maila / loginu przy wejściu</span>
+                <span class="text-xs font-bold text-amber-300">Wymagaj nicku z listy przy wejściu</span>
             </label>
             <div>
-                <label class="text-[11px] font-bold uppercase text-slate-400 block mb-1">Dopuszczone maile lub loginy (po przecinku lub w nowej linii):</label>
-                <textarea id="vip-whitelist-textarea" rows="3" placeholder="np. antonio@szkola.pl, kacper123, michal..." class="w-full bg-slate-950 border border-slate-700 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-amber-400"></textarea>
+                <label for="vip-whitelist-textarea" class="text-[11px] font-bold uppercase text-slate-400 block mb-1">Nicki (po przecinku lub w nowej linii)</label>
+                <textarea id="vip-whitelist-textarea" rows="3" placeholder="np. Antonio, Kacper123, Michał" class="w-full bg-slate-950 border border-slate-700 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-amber-400"></textarea>
             </div>
             <div class="flex gap-3">
                 <button onclick="closeVipAccessModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold">Zamknij</button>
@@ -973,19 +1038,30 @@
     </div>
 
 
+    <div id="modal-delete-room" role="alertdialog" aria-modal="true" aria-labelledby="delete-room-title" aria-describedby="delete-room-description"
+        onkeydown="if (event.key === 'Escape') { event.preventDefault(); closeDeleteRoomModal(); }"
+        class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-md space-y-4 rounded-3xl border border-rose-700/70 bg-slate-900 p-6 shadow-2xl">
+            <h3 id="delete-room-title" class="font-display text-xl font-bold text-white">Usunąć lobby?</h3>
+            <p id="delete-room-description" class="text-sm text-slate-300">Wszyscy wrócą do wyboru pokoju. Hasła, punkty i historia tej sesji zostaną usunięte.</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="delete-room-cancel-btn" type="button" onclick="closeDeleteRoomModal()" class="rounded-xl bg-slate-800 px-3 py-3 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-50">Anuluj</button>
+                <button id="delete-room-confirm-btn" type="button" onclick="confirmDeleteRoom()" class="rounded-xl bg-rose-700 px-3 py-3 text-sm font-bold text-white hover:bg-rose-600 disabled:opacity-50">Usuń lobby</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ========================================================================= -->
-    <!-- SILNIK GRY I PODWÓJNA SYNCHRONIZACJA LIVE (GitHub Pages MQTT + Firestore) -->
+    <!-- SILNIK GRY I SYNCHRONIZACJA LIVE (MQTT) -->
     <!-- ========================================================================= -->
     <script>
-        // --- AWATARY EMOJI DO WYBORU (Oprócz wgrywania własnego zdjęcia / GIF-a) ---
+        // --- AWATARY EMOJI DO WYBORU (Oprócz wgrywania własnego zdjęcia) ---
         const AVATARS = ['😎', '🤠', '👽', '🐸', '🦊', '🐱', '🐶', '🐵', '👻', '🤖', '🦄', '🦖'];
-        const INACTIVE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minut nieaktywności usuwa gracza i czyści stare lobby
 
         // --- PROFIL GRACZA ---
         let myPlayer = {
             id: 'p_' + Math.random().toString(36).substring(2, 9),
             nick: '',
-            emailOrLogin: '',
             avatar: '😎',
             avatarImg: null,
             score: 0,
@@ -997,8 +1073,6 @@
 
         let authMode = 'create'; // 'create' | 'join'
         let currentRoomCode = '';
-        let currentRoomSessionId = ''; // Unikalny identyfikator sesji pokoju zapobiegający mieszaniu starych pokoi
-        let heartbeatTimer = null;
 
         // --- WSPÓLNY STAN POKOJU ---
         let wordsPool = [];
@@ -1006,10 +1080,7 @@
         let roomPlayers = {}; // { playerId: { ... } }
         let roomGuessedFeed = []; // Historia odgadniętych i spasowanych haseł w pokoju
         let roomHostId = ''; // ID Hosta / Administratora pokoju
-        let roomRules = {
-            blockOwnWords: true,
-            avoidRepeats: true
-        };
+        let roomRules = { blockOwnWords: true };
         let roomSecurity = {
             requireWhitelist: false,
             allowedLogins: []
@@ -1017,6 +1088,10 @@
 
         // --- STAN LOKALNY INTERFEJSU I RUNDY ---
         let selectedCategory = '😎 Osoba / Ekipa';
+        let currentTab = 'play';
+        let pendingWordDraw = null;
+        let nextWordRequestId = 0;
+        const lastDrawReplyByPlayer = new Map();
         let showSpoilers = false;
         let gameDurationSeconds = 0; // Zawsze 0 = Bez limitu czasu
         let preCountdownInterval = null;
@@ -1030,70 +1105,7 @@
 
         // --- SPRAWDZENIE CZY JESTEM HOSTEM / ADMINEM POKOJU ---
         function isRoomHost() {
-            return !roomHostId || roomHostId === myPlayer.id;
-        }
-
-        // --- NORMALIZACJA I DETERMINISTYCZNY KLUCZ HASŁA (ZERO DUPLIKATÓW NIGDY!) ---
-        function normalizeWordKey(str) {
-            return String(str || '')
-                .trim()
-                .toLowerCase()
-                .replace(/\s+/g, ' ');
-        }
-
-        function makeWordIdFromText(str) {
-            const norm = normalizeWordKey(str);
-            return 'w_' + encodeURIComponent(norm).replace(/[^a-zA-Z0-9_-]/g, '_');
-        }
-
-        function deduplicateWordsPool() {
-            const seenKeys = new Set();
-            const cleanList = [];
-            for (const w of wordsPool) {
-                if (!w || !w.text) continue;
-                const key = normalizeWordKey(w.text);
-                if (!key) continue;
-                const canonicalId = makeWordIdFromText(w.text);
-                // Jeśli stara wersja zapisała losowe ID jako zużyte, przepisujemy je na kanoniczny klucz
-                if (w.id && usedWordIds.has(w.id)) {
-                    usedWordIds.add(canonicalId);
-                    usedWordIds.add(key);
-                }
-                w.id = canonicalId;
-                w.normKey = key;
-                if (!seenKeys.has(key)) {
-                    seenKeys.add(key);
-                    cleanList.push(w);
-                }
-            }
-            wordsPool = cleanList;
-        }
-
-        function isWordAlreadyUsedAnywhere(word) {
-            if (!word) return true;
-            const key = normalizeWordKey(word.text);
-            const canonicalId = makeWordIdFromText(word.text);
-            if (usedWordIds.has(word.id) || usedWordIds.has(canonicalId) || usedWordIds.has(key)) {
-                return true;
-            }
-            // Sprawdzenie w lokalnej historii rundy
-            if (roundHistory.some(r => normalizeWordKey(r.text) === key)) {
-                return true;
-            }
-            // Sprawdzenie w globalnej historii odgadniętych/spasowanych haseł pokoju
-            if (roomGuessedFeed.some(ev => normalizeWordKey(ev.wordText) === key)) {
-                return true;
-            }
-            return false;
-        }
-
-        function markWordAsUsedEverywhere(word) {
-            if (!word) return;
-            const key = normalizeWordKey(word.text);
-            const canonicalId = makeWordIdFromText(word.text);
-            if (word.id) usedWordIds.add(word.id);
-            usedWordIds.add(canonicalId);
-            if (key) usedWordIds.add(key);
+            return roomHostId === myPlayer.id;
         }
 
         // --- POMOCNICZE ESCAPOWANIE HTML ---
@@ -1198,171 +1210,197 @@
                         osc.type = 'sawtooth';
                         osc.frequency.setValueAtTime(freq, now + idx * 0.11);
                         osc.frequency.linearRampToValueAtTime(freq - 45, now + idx * 0.11 + 0.14);
-                        gain.gain.setValueAtTime(0.28, now + idx * 0.11);
+                        gain.gain.setValueAtTime(0.26, now + idx * 0.11);
                         gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.11 + 0.16);
                         osc.connect(gain); gain.connect(audioCtx.destination);
                         osc.start(now + idx * 0.11); osc.stop(now + idx * 0.11 + 0.16);
                     });
                 } else if (type === 'end') {
-                    [440, 392, 349.23, 261.63].forEach((freq, idx) => {
+                    [440, 392, 329.63, 261.63].forEach((freq, idx) => {
                         const osc = audioCtx.createOscillator();
                         const gain = audioCtx.createGain();
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
-                        gain.gain.setValueAtTime(0.3, now + idx * 0.12);
-                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.25);
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+                        gain.gain.setValueAtTime(0.3, now + idx * 0.14);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.14 + 0.26);
                         osc.connect(gain); gain.connect(audioCtx.destination);
-                        osc.start(now + idx * 0.12); osc.stop(now + idx * 0.12 + 0.25);
+                        osc.start(now + idx * 0.14); osc.stop(now + idx * 0.14 + 0.26);
                     });
                 }
             } catch (e) {}
         }
 
-        // --- INICJALIZACJA EKRANU LOGOWANIA I AWATARÓW ---
-        function initLobbyScreen() {
-            const picker = document.getElementById('avatar-picker');
-            if (picker) {
-                picker.innerHTML = '';
-                AVATARS.forEach(emoji => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    const isSelected = !myPlayer.avatarImg && myPlayer.avatar === emoji;
-                    btn.className = `w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 transition ${
-                        isSelected
-                            ? 'bg-indigo-600 text-white border-2 border-white shadow-md scale-105'
-                            : 'bg-slate-950 hover:bg-slate-800 border border-slate-800'
-                    }`;
-                    btn.textContent = emoji;
-                    btn.onclick = () => selectAvatar(emoji);
-                    picker.appendChild(btn);
-                });
-            }
+        // --- AWATAR Z PLIKU ---
+        const MAX_GIF_AVATAR_BYTES = 96 * 1024;
+        const MAX_GIF_AVATAR_DIMENSION = 512;
+        const MAX_AVATAR_URL_LENGTH = 'data:image/jpeg;base64,'.length + Math.ceil(MAX_GIF_AVATAR_BYTES / 3) * 4;
+        let pendingAvatarUpload = null;
 
-            const createInput = document.getElementById('create-room-code-input');
-            if (createInput && !createInput.value) {
-                rollRandomRoomCode();
-            }
-            renderAuthAvatarPreview();
-        }
-
-        window.selectAvatar = function(emoji) {
-            myPlayer.avatar = emoji;
-            myPlayer.avatarImg = null;
-            renderAuthAvatarPreview();
-            initLobbyScreen();
-            if (currentRoomCode) broadcastRoomState();
-        };
-
-        // --- OBSŁUGA WŁASNEGO ZDJĘCIA ORAZ ANIMOWANEGO GIF-A JAKO AWATARA ---
-        window.handleCustomAvatarUpload = function(event) {
-            const file = event.target.files && event.target.files[0];
+        window.handleCustomAvatarUpload = async function(event) {
+            const input = event.target;
+            const file = input.files?.[0];
             if (!file) return;
+            input.value = '';
 
-            const isGif = file.type === 'image/gif' || /\.gif$/i.test(file.name || '');
+            const isGif = file.type === 'image/gif' || /\.gif$/i.test(file.name);
+            const upload = Symbol();
+            pendingAvatarUpload = upload;
 
-            if (isGif) {
-                if (file.size > 900 * 1024) {
-                    showToast('Ten GIF jest spory (>900KB) – mniejsze GIF-y szybciej przesyłają się znajomym!', 'warning');
+            try {
+                if (isGif && file.size > MAX_GIF_AVATAR_BYTES) {
+                    showToast('Wybierz GIF o rozmiarze do 96 KB.', 'warning');
+                    return;
                 }
-                const gifReader = new FileReader();
-                gifReader.onload = function(ev) {
-                    myPlayer.avatarImg = ev.target.result;
-                    renderAuthAvatarPreview();
-                    initLobbyScreen();
-                    if (currentRoomCode) broadcastRoomState();
-                    showToast('Animowany GIF został ustawiony jako Twoje profilowe!', 'success');
-                };
-                gifReader.readAsDataURL(file);
-                return;
-            }
+                if (file.size > 10 * 1024 * 1024) {
+                    showToast('Wybierz zdjęcie o rozmiarze do 10 MB.', 'warning');
+                    return;
+                }
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
+                let dataUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                if (pendingAvatarUpload !== upload) return;
+
+                if (isGif) {
+                    const gifData = dataUrl.slice(dataUrl.indexOf(',') + 1);
+                    if (!/^R0lGOD(?:dh|lh)/.test(gifData)) throw new Error('Invalid GIF');
+                    dataUrl = 'data:image/gif;base64,' + gifData;
+                }
+
+                const img = await new Promise((resolve, reject) => {
+                    const image = new Image();
+                    image.onload = () => resolve(image);
+                    image.onerror = reject;
+                    image.src = dataUrl;
+                });
+                if (pendingAvatarUpload !== upload) return;
+
+                if (isGif) {
+                    if (Math.max(img.naturalWidth, img.naturalHeight) > MAX_GIF_AVATAR_DIMENSION) {
+                        showToast('Wybierz GIF o wymiarach do 512 × 512 px.', 'warning');
+                        return;
+                    }
+                } else {
                     const canvas = document.createElement('canvas');
                     const size = 96;
                     canvas.width = size;
                     canvas.height = size;
-                    const ctx = canvas.getContext('2d');
+                    const width = img.naturalWidth;
+                    const height = img.naturalHeight;
+                    const crop = Math.min(width, height);
+                    canvas.getContext('2d').drawImage(
+                        img, (width - crop) / 2, (height - crop) / 2, crop, crop, 0, 0, size, size
+                    );
+                    dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+                }
 
-                    const minDim = Math.min(img.width, img.height);
-                    const sx = (img.width - minDim) / 2;
-                    const sy = (img.height - minDim) / 2;
-                    ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
-
-                    myPlayer.avatarImg = canvas.toDataURL('image/jpeg', 0.8);
-                    renderAuthAvatarPreview();
-                    initLobbyScreen();
-                    if (currentRoomCode) broadcastRoomState();
-                    showToast('Twoje zdjęcie zostało ustawione jako profilowe!', 'success');
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+                if (!safeAvatarSrc(dataUrl)) throw new Error('Invalid avatar');
+                myPlayer.avatarImg = dataUrl;
+                initLobbyScreen();
+                showToast(isGif ? 'Animowany GIF ustawiony jako awatar!' : 'Zdjęcie ustawione jako awatar!', 'success');
+            } catch (error) {
+                if (pendingAvatarUpload === upload) showToast('Nie udało się wczytać obrazu.', 'error');
+            } finally {
+                if (pendingAvatarUpload === upload) pendingAvatarUpload = null;
+            }
         };
 
+        function safeAvatarSrc(src) {
+            if (typeof src !== 'string' || src.length > MAX_AVATAR_URL_LENGTH) return '';
+            return /^data:image\/(?:jpeg|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(src) ? src : '';
+        }
+
         function renderAuthAvatarPreview() {
-            const boxes = [document.getElementById('auth-avatar-preview'), document.getElementById('step2-avatar-preview')];
-            boxes.forEach(box => {
-                if (!box) return;
-                if (myPlayer.avatarImg) {
-                    box.innerHTML = `<img src="${myPlayer.avatarImg}" alt="Avatar" class="w-full h-full object-cover">`;
+            const avatarSrc = safeAvatarSrc(myPlayer.avatarImg);
+            for (const id of ['auth-avatar-preview', 'step2-avatar-preview']) {
+                const box = document.getElementById(id);
+                if (!box) continue;
+                if (avatarSrc) {
+                    box.innerHTML = `<img src="${avatarSrc}" alt="Awatar" class="w-full h-full object-cover">`;
                 } else {
                     box.textContent = myPlayer.avatar || '😎';
                 }
-            });
+            }
         }
 
         function renderHeaderAvatar() {
             const box = document.getElementById('header-player-avatar-box');
             if (!box) return;
-            if (myPlayer.avatarImg) {
-                box.innerHTML = `<img src="${myPlayer.avatarImg}" alt="Avatar" class="w-full h-full object-cover">`;
+            const avatarSrc = safeAvatarSrc(myPlayer.avatarImg);
+            if (avatarSrc) {
+                box.innerHTML = `<img src="${avatarSrc}" alt="Awatar" class="w-full h-full object-cover">`;
             } else {
-                box.innerHTML = `<span id="header-player-avatar" class="text-base sm:text-lg">${escapeHtml(myPlayer.avatar || '😎')}</span>`;
+                box.innerHTML = `<span class="text-base sm:text-lg">${escapeHtml(myPlayer.avatar || '😎')}</span>`;
             }
         }
 
         function renderPlayerAvatarBadge(player, sizeClass = 'w-9 h-9 text-xl') {
-            if (player.avatarImg) {
-                return `<div class="${sizeClass} rounded-xl overflow-hidden shrink-0 border border-white/20 shadow-sm"><img src="${player.avatarImg}" class="w-full h-full object-cover" alt=""></div>`;
+            const avatarSrc = safeAvatarSrc(player.avatarImg);
+            if (avatarSrc) {
+                return `<div class="${sizeClass} rounded-xl overflow-hidden shrink-0 border border-white/20 shadow-sm"><img src="${avatarSrc}" loading="lazy" decoding="async" class="w-full h-full object-cover" alt=""></div>`;
             }
             return `<div class="${sizeClass} rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">${escapeHtml(player.avatar || '😎')}</div>`;
         }
 
-        // --- KROK 1 -> KROK 2: PRZEJŚCIE Z LOGOWANIA DO WYBORU POKOJU ---
+        // --- KROK 1 -> KROK 2: PROFIL I WYBÓR POKOJU ---
         window.proceedToRoomStep = function() {
-            const inputEl = document.getElementById('player-nick-input');
-            const nickInput = inputEl ? inputEl.value.trim() : '';
-            if (!nickInput) {
-                showToast('Wpisz najpierw swoją nazwę (Nick)!', 'warning');
-                if (inputEl) inputEl.focus();
+            const nickInput = document.getElementById('player-nick-input');
+            const nick = nickInput.value.trim();
+            if (!nick) {
+                showToast('Wpisz najpierw swoją ksywkę!', 'warning');
+                nickInput.focus();
+                return;
+            }
+            if (pendingAvatarUpload) {
+                showToast('Poczekaj, aż wczyta się awatar.', 'info');
                 return;
             }
 
-            myPlayer.nick = nickInput;
-            myPlayer.emailOrLogin = nickInput.toLowerCase();
-            myPlayer.lastSeen = Date.now();
-
+            myPlayer.nick = nick;
             renderAuthAvatarPreview();
-            const nickPreview = document.getElementById('step2-nick-preview');
-            if (nickPreview) nickPreview.textContent = myPlayer.nick;
-
-            const createInput = document.getElementById('create-room-code-input');
-            if (createInput && !createInput.value) {
-                rollRandomRoomCode();
-            }
-
+            document.getElementById('step2-nick-preview').textContent = myPlayer.nick;
             document.getElementById('auth-step-1').classList.add('hidden');
             document.getElementById('auth-step-2').classList.remove('hidden');
             playSound('tick');
         };
 
         window.backToAccountStep = function() {
+            if (roomAttempt) disconnectRoom(false);
             document.getElementById('auth-step-2').classList.add('hidden');
             document.getElementById('auth-step-1').classList.remove('hidden');
         };
+
+        function initLobbyScreen() {
+            const picker = document.getElementById('avatar-picker');
+            if (!picker) return;
+            picker.innerHTML = '';
+            AVATARS.forEach(av => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = av;
+                const isSelected = !myPlayer.avatarImg && av === myPlayer.avatar;
+                btn.className = `w-9 h-9 rounded-lg text-xl flex items-center justify-center shrink-0 transition ${
+                    isSelected ? 'bg-indigo-600 border-2 border-white scale-105 shadow-md' : 'bg-slate-900 hover:bg-slate-800 border border-slate-800 opacity-75'
+                }`;
+                btn.onclick = () => {
+                    pendingAvatarUpload = null;
+                    myPlayer.avatar = av;
+                    myPlayer.avatarImg = null;
+                    initLobbyScreen();
+                };
+                picker.appendChild(btn);
+            });
+
+            renderAuthAvatarPreview();
+
+            const codeInput = document.getElementById('create-room-code-input');
+            if (codeInput && !codeInput.value) {
+                rollRandomRoomCode();
+            }
+        }
 
         window.setAuthMode = function(mode) {
             authMode = mode;
@@ -1388,147 +1426,42 @@
             }
         };
 
-        // --- WEJŚCIE DO POKOJU W KROKU 2 (Z PEŁNĄ IZOLACJĄ POKOI I AUTO-CZYSZCZENIEM PO 5 MIN) ---
-        function resetLocalRoomMemory() {
-            wordsPool = [];
-            usedWordIds = new Set();
-            roomPlayers = {};
-            roomGuessedFeed = [];
-            roomHostId = '';
-            roomRules = { blockOwnWords: true, avoidRepeats: true };
-            roomSecurity = { requireWhitelist: false, allowedLogins: [] };
-            window._lastHostUpdatedAt = 0;
-            window._lastClearedAt = 0;
-            window._lastResetUsedAt = 0;
-            window._lastHistoryClearedAt = 0;
-            window._lastScoresResetAt = 0;
-            window._lastAdminActionAt = 0;
-        }
-
-        function pruneInactivePlayersAndLobby() {
-            const now = Date.now();
-            let removedAny = false;
-            Object.keys(roomPlayers).forEach(pid => {
-                if (pid === myPlayer.id) {
-                    roomPlayers[pid].lastSeen = now;
-                    return;
-                }
-                const p = roomPlayers[pid];
-                if (!p || !p.lastSeen || (now - p.lastSeen > INACTIVE_TIMEOUT_MS)) {
-                    delete roomPlayers[pid];
-                    removedAny = true;
-                }
-            });
-
-            if (roomHostId && !roomPlayers[roomHostId]) {
-                const remainingIds = Object.keys(roomPlayers);
-                roomHostId = remainingIds.length > 0 ? remainingIds[0] : myPlayer.id;
-            }
-
-            if (removedAny) {
-                updateUI();
-            }
-        }
-
-        window.enterPartyRoom = async function() {
+        // --- WEJŚCIE DO POKOJU W KROKU 2 ---
+        window.enterPartyRoom = function() {
+            if (roomAttempt || currentRoomCode) return;
             if (!myPlayer.nick) {
-                const fallbackNick = document.getElementById('player-nick-input').value.trim();
-                if (!fallbackNick) {
-                    backToAccountStep();
-                    showToast('Wpisz najpierw swój Nick!', 'warning');
-                    return;
-                }
-                myPlayer.nick = fallbackNick;
-            }
-
-            let rawCode = authMode === 'create'
-                ? document.getElementById('create-room-code-input').value.trim()
-                : document.getElementById('join-room-code-input').value.trim();
-
-            rawCode = rawCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
-
-            if (rawCode.length < 2) {
-                showToast('Kod pokoju musi mieć od 2 do 5 znaków!', 'warning');
+                backToAccountStep();
+                showToast('Wpisz najpierw swój nick!', 'warning');
                 return;
             }
 
-            resetLocalRoomMemory();
-
-            myPlayer.id = 'p_' + Math.random().toString(36).substring(2, 9);
-            myPlayer.score = 0;
-            myPlayer.guessedCount = 0;
-            myPlayer.passedCount = 0;
-            myPlayer.isPlayingNow = false;
-            myPlayer.currentWordId = null;
-            myPlayer.lastSeen = Date.now();
-
-            currentRoomCode = rawCode;
-
-            if (authMode === 'create') {
-                roomHostId = myPlayer.id;
-                currentRoomSessionId = 'ses_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
-                window._roomCreatedFreshAt = Date.now();
-            } else {
-                currentRoomSessionId = '';
+            const input = document.getElementById(authMode === 'create' ? 'create-room-code-input' : 'join-room-code-input');
+            const code = input.value.trim().toUpperCase();
+            if (!/^[A-Z0-9]{2,5}$/.test(code)) {
+                showToast('Kod musi mieć od 2 do 5 liter lub cyfr.', 'warning');
+                return;
+            }
+            if (typeof mqtt === 'undefined') {
+                showToast('Brak połączenia z serwerem gry. Sprawdź internet i odśwież stronę.', 'error');
+                return;
             }
 
-            myPlayer.isHost = (roomHostId === myPlayer.id);
-            roomPlayers[myPlayer.id] = { ...myPlayer };
-
-            renderHeaderAvatar();
-            document.getElementById('header-player-nick').textContent = myPlayer.nick;
-            document.getElementById('header-room-code').textContent = currentRoomCode;
-            document.getElementById('invite-code-inline').textContent = currentRoomCode;
-
-            document.getElementById('screen-lobby-auth').classList.add('hidden');
-
-            await connectLiveRoom(currentRoomCode, authMode === 'create');
-            startRoomHeartbeat();
-            updateUI();
-            showToast(`Wbiłeś do pokoju #${currentRoomCode} jako ${myPlayer.nick}!`, 'success');
+            resetRoomState();
+            myPlayer.id = createRoomIdentifier('p_');
+            roomAttempt = { code, mode: authMode, candidate: null, contender: false, connected: false };
+            document.getElementById('enter-room-button').disabled = true;
+            document.getElementById('step2-submit-label').textContent = 'ŁĄCZENIE…';
+            connectLiveRoom(roomAttempt);
         };
 
-        window.leaveRoom = function() {
-            if (currentRoomCode && myPlayer.id) {
-                delete roomPlayers[myPlayer.id];
-                publishMqttPacket({
-                    type: 'PLAYER_LEFT',
-                    roomCode: currentRoomCode,
-                    playerId: myPlayer.id
-                });
-            }
-            if (roomUnsubscribe) {
-                try { roomUnsubscribe(); } catch (e) {}
-                roomUnsubscribe = null;
-            }
-            if (mqttClient) {
-                try { mqttClient.end(true); } catch (e) {}
-                mqttClient = null;
-            }
-            if (heartbeatTimer) {
-                clearInterval(heartbeatTimer);
-                heartbeatTimer = null;
-            }
-            currentRoomCode = '';
-            resetLocalRoomMemory();
+        window.leaveRoom = function(announce = true) {
+            disconnectRoom(announce);
             document.getElementById('screen-lobby-auth').classList.remove('hidden');
             document.getElementById('auth-step-1').classList.add('hidden');
             document.getElementById('auth-step-2').classList.remove('hidden');
-            updateUI();
+            rollRandomRoomCode();
+            switchTab('play');
         };
-
-        function startRoomHeartbeat() {
-            if (heartbeatTimer) clearInterval(heartbeatTimer);
-            heartbeatTimer = setInterval(() => {
-                if (!currentRoomCode) return;
-                myPlayer.lastSeen = Date.now();
-                if (roomPlayers[myPlayer.id]) {
-                    roomPlayers[myPlayer.id].lastSeen = myPlayer.lastSeen;
-                }
-                pruneInactivePlayersAndLobby();
-                broadcastRoomState();
-            }, 25000);
-        }
 
         window.copyRoomInvite = function() {
             const temp = document.createElement('textarea');
@@ -1540,8 +1473,12 @@
             showToast(`Skopiowano kod pokoju: ${currentRoomCode}!`, 'info');
         };
 
-        // --- AUTORYZACJA VIP (LISTA DOPUSZCZONYCH MAILI / LOGINÓW PRZEZ HOSTA) ---
+        // --- LISTA NICKÓW VIP ---
         window.openVipAccessModal = function() {
+            if (!isRoomHost()) {
+                showToast('Tylko host może zmieniać listę VIP.', 'warning');
+                return;
+            }
             document.getElementById('vip-whitelist-toggle').checked = !!roomSecurity.requireWhitelist;
             document.getElementById('vip-whitelist-textarea').value = (roomSecurity.allowedLogins || []).join(', ');
             document.getElementById('modal-vip-access').classList.remove('hidden');
@@ -1554,13 +1491,14 @@
         };
 
         window.saveVipAccessSettings = function() {
+            if (!isRoomHost()) {
+                closeVipAccessModal();
+                return;
+            }
             const enabled = document.getElementById('vip-whitelist-toggle').checked;
             const rawList = document.getElementById('vip-whitelist-textarea').value;
             const parsed = rawList.split(/[\n,]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
 
-            if (myPlayer.emailOrLogin && !parsed.includes(myPlayer.emailOrLogin.toLowerCase())) {
-                parsed.push(myPlayer.emailOrLogin.toLowerCase());
-            }
             if (myPlayer.nick && !parsed.includes(myPlayer.nick.toLowerCase())) {
                 parsed.push(myPlayer.nick.toLowerCase());
             }
@@ -1576,356 +1514,782 @@
         };
 
         // =========================================================================
-        // PODWÓJNA SYNCHRONIZACJA LIVE (MQTT WebSockets + Opcjonalny Firebase)
+        // POKOJE LIVE: MQTT, SESJE GRACZY I WYGASANIE OBECNOŚCI
         // =========================================================================
-        let mqttClient = null;
-        let currentMqttTopic = '';
-        let cloudDb = null;
-        let cloudUser = null;
-        let cloudFns = null;
-        let roomUnsubscribe = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'czolko-party-io';
+        const ROOM_IDLE_MS = 5 * 60 * 1000;
+        const ROOM_PULSE_MS = 20 * 1000;
+        const ROOM_CONNECT_MS = 8000;
+        const ROOM_DISCOVERY_MS = 900;
+        const ROOM_CLOSE_TTL_SECONDS = 15 * 60;
+        const ROOM_CLOSE_TIMEOUT_MS = 4000;
+        const formerRoomHosts = new Set();
+        const ROOM_WORD_ID = /^[a-zA-Z0-9_-]{1,1600}$/;
+        const ROOM_PLAYER_ID = /^p_[a-f0-9]{32}$/;
+        const ROOM_GENERATION_ID = /^r_[a-f0-9]{32}$/;
+        const roomWordChanges = new Map();
+        const roomStateVersions = new Map();
+        const departedPlayers = new Set();
+        const roomMetaKeys = ['clearedAt', 'historyClearedAt', 'adminActionAt'];
+        let roomAttempt = null;
+        let roomConnection = null;
+        let roomGeneration = '';
+        let roomClosing = false;
+        let roomLeaseUntil = 0;
+        let roomPulseTimer = null;
+        let roomRenderFrame = null;
+        let roomStateVersion = 0;
+        let roomStateDirty = false;
+        let roomScoreOverrides = {};
 
-        async function initCloudEngine() {
-            try {
-                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                    const [{ initializeApp }, { getAuth, signInAnonymously, signInWithCustomToken }, { getFirestore, doc, setDoc, onSnapshot }] = await Promise.all([
-                        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js'),
-                        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js'),
-                        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js')
-                    ]);
-                    const firebaseConfig = JSON.parse(__firebase_config);
-                    const app = initializeApp(firebaseConfig);
-                    const auth = getAuth(app);
-                    cloudDb = getFirestore(app);
-                    cloudFns = { doc, setDoc, onSnapshot };
-
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    cloudUser = auth.currentUser;
-                }
-            } catch (e) {
-                cloudDb = null;
-            }
+        function createRoomIdentifier(prefix) {
+            const random = crypto.getRandomValues(new Uint8Array(16));
+            return prefix + Array.from(random, byte => byte.toString(16).padStart(2, '0')).join('');
         }
 
-        async function connectLiveRoom(roomCode, isCreatingNewRoom = false) {
-            if (roomUnsubscribe) {
-                try { roomUnsubscribe(); } catch (e) {}
-                roomUnsubscribe = null;
+        function roomMeta(key) {
+            return window['_last' + key[0].toUpperCase() + key.slice(1)] || 0;
+        }
+
+        function setRoomMeta(key, value) {
+            window['_last' + key[0].toUpperCase() + key.slice(1)] = value;
+        }
+
+        function resetRoomState() {
+            clearInterval(roomPulseTimer);
+            clearInterval(preCountdownInterval);
+            clearInterval(activeGameInterval);
+            clearInterval(nextWordCountdownInterval);
+            if (roomRenderFrame !== null) cancelAnimationFrame(roomRenderFrame);
+            roomPulseTimer = null;
+            roomRenderFrame = null;
+            preCountdownInterval = null;
+            activeGameInterval = null;
+            nextWordCountdownInterval = null;
+            currentRoomCode = '';
+            roomGeneration = '';
+            roomClosing = false;
+            formerRoomHosts.clear();
+            roomLeaseUntil = 0;
+            roomHostId = '';
+            roomPlayers = Object.create(null);
+            roomRules = { blockOwnWords: true };
+            roomSecurity = { requireWhitelist: false, allowedLogins: [] };
+            wordsPool = [];
+            usedWordIds.clear();
+            roomGuessedFeed = [];
+            roomWordChanges.clear();
+            roomStateVersions.clear();
+            departedPlayers.clear();
+            roomScoreOverrides = {};
+            roomStateVersion = 0;
+            roomStateDirty = false;
+            roomMetaKeys.forEach(key => setRoomMeta(key, 0));
+            isWaitingForNextWord = false;
+            currentActiveWord = null;
+            roundHistory = [];
+            currentRoundNetPoints = 0;
+            Object.assign(myPlayer, { score: 0, guessedCount: 0, passedCount: 0, isPlayingNow: false, currentWordId: null });
+            if (typeof resetGameRoomState === 'function') resetGameRoomState();
+            for (const id of ['overlay-countdown', 'overlay-active-game', 'overlay-summary', 'modal-import', 'modal-vip-access', 'modal-delete-room']) {
+                const overlay = document.getElementById(id);
+                overlay?.classList.add('hidden');
+                overlay?.classList.remove('flex');
             }
-            if (mqttClient) {
-                try { mqttClient.end(true); } catch (e) {}
-                mqttClient = null;
-            }
-
-            if (cloudDb && cloudUser && cloudFns) {
-                const docId = `room_v11_${roomCode}`;
-                const roomRef = cloudFns.doc(cloudDb, 'artifacts', appId, 'public', 'data', 'czolko_rooms', docId);
-
-                if (isCreatingNewRoom) {
-                    await broadcastRoomState({ freshRoomAt: window._roomCreatedFreshAt || Date.now() });
-                }
-
-                roomUnsubscribe = cloudFns.onSnapshot(roomRef, (snapshot) => {
-                    if (roomCode !== currentRoomCode) return;
-                    if (snapshot.exists()) {
-                        mergeIncomingRoomState(snapshot.data());
-                    } else {
-                        broadcastRoomState();
-                    }
-                }, () => {});
-            }
-
-            try {
-                if (typeof mqtt !== 'undefined') {
-                    const topic = `czolko_io_pl_v11/room_${roomCode}`;
-                    currentMqttTopic = topic;
-
-                    mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
-                        clientId: 'czolko11_' + myPlayer.id + '_' + Math.random().toString(16).slice(2, 6),
-                        clean: true,
-                        connectTimeout: 4000,
-                        reconnectPeriod: 2000,
-                    });
-
-                    mqttClient.on('connect', () => {
-                        if (roomCode !== currentRoomCode) return;
-                        setSyncBadge(true);
-                        mqttClient.subscribe(topic, { qos: 0 }, () => {
-                            if (!isCreatingNewRoom) {
-                                publishMqttPacket({ type: 'SYNC_REQUEST', roomCode: currentRoomCode, senderId: myPlayer.id });
-                            }
-                            broadcastRoomState();
-                        });
-                    });
-
-                    mqttClient.on('message', (t, payload) => {
-                        try {
-                            const msg = JSON.parse(payload.toString());
-                            if (msg.roomCode && msg.roomCode !== currentRoomCode) return;
-                            if (msg.type === 'PLAYER_LEFT' && msg.playerId) {
-                                delete roomPlayers[msg.playerId];
-                                updateUI();
-                                return;
-                            }
-                            if (msg.type === 'SYNC_REQUEST' && msg.senderId !== myPlayer.id) {
-                                broadcastRoomState();
-                            } else if (msg.type === 'ROOM_STATE') {
-                                mergeIncomingRoomState(msg.state);
-                            }
-                        } catch (err) {}
-                    });
-
-                    mqttClient.on('error', () => setSyncBadge(false));
-                }
-            } catch (e) {}
+            setSyncBadge(false);
         }
 
         function setSyncBadge(online) {
             const dot = document.getElementById('sync-dot');
             if (!dot) return;
-            if (online) {
-                dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-            } else {
-                dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+            dot.className = online
+                ? 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse'
+                : 'w-2 h-2 rounded-full bg-amber-400';
+            dot.title = online ? 'Połączono' : 'Brak połączenia';
+        }
+
+        function scheduleRoomRender() {
+            if (roomRenderFrame !== null) return;
+            roomRenderFrame = requestAnimationFrame(() => {
+                roomRenderFrame = null;
+                if (currentRoomCode) updateUI();
+            });
+        }
+
+        function stopRoomAttempt() {
+            if (!roomAttempt) return;
+            clearTimeout(roomAttempt.deadline);
+            clearTimeout(roomAttempt.creationTimer);
+            clearInterval(roomAttempt.probeTimer);
+            roomAttempt = null;
+            document.getElementById('enter-room-button').disabled = false;
+            document.getElementById('step2-submit-label').textContent = authMode === 'create'
+                ? 'STWÓRZ POKÓJ I GRAJ!' : 'DOŁĄCZ DO POKOJU!';
+        }
+
+        function disconnectRoom(announce) {
+            const connection = roomConnection;
+            const publishedLeave = announce && sendRoomEvent('PLAYER_LEFT');
+            roomConnection = null;
+            stopRoomAttempt();
+            if (connection) {
+                clearTimeout(connection.resumeTimer);
+                connection.client.end(!publishedLeave);
+                if (publishedLeave) {
+                    setTimeout(() => {
+                        if (!connection.client.disconnected) connection.client.end(true);
+                    }, 1000);
+                }
+            }
+            resetRoomState();
+        }
+
+        function failRoomAttempt(message) {
+            disconnectRoom(false);
+            showToast(message, 'warning');
+        }
+
+        function isRoomConnected() {
+            return Boolean(roomGeneration && !roomClosing && roomConnection?.ready && !roomConnection.validating && roomConnection.client.connected && Date.now() < roomLeaseUntil);
+        }
+
+        function publishRoomPacket(type, fields = {}, qos = 1) {
+            const connection = roomConnection;
+            if (!connection?.ready || !connection.client.connected) return false;
+            try {
+                const packet = { ...fields, type, roomId: roomGeneration, senderId: myPlayer.id };
+                connection.client.publish(connection.topic, JSON.stringify(packet), { qos, retain: false });
+                return true;
+            } catch (error) {
+                return false;
             }
         }
 
-        function publishMqttPacket(packet) {
-            if (mqttClient && mqttClient.connected && currentMqttTopic) {
-                try {
-                    mqttClient.publish(currentMqttTopic, JSON.stringify(packet));
-                } catch (e) {}
-            }
+        function sendRoomEvent(type, fields) {
+            return isRoomConnected() && publishRoomPacket(type, fields);
         }
 
-        function mergeIncomingRoomState(incoming) {
-            if (!incoming) return;
-            // Odrzucamy pakiety należące do innego kodu pokoju
-            if (incoming.roomCode && incoming.roomCode !== currentRoomCode) return;
-
-            const now = Date.now();
-
-            // Jeśli całe przychodzące lobby jest starsze niż 5 minut (300 000 ms), ignorujemy stare duchy i czyścimy lobby!
-            if (incoming.updatedAt && (now - incoming.updatedAt > INACTIVE_TIMEOUT_MS)) {
+        function connectLiveRoom(attempt) {
+            let client;
+            try {
+                client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+                    clientId: 'cz12_' + myPlayer.id.slice(2),
+                    protocolVersion: 5,
+                    clean: true,
+                    connectTimeout: 4000,
+                    reconnectPeriod: 1800,
+                    resubscribe: false,
+                    queueQoSZero: false
+                });
+            } catch (error) {
+                failRoomAttempt('Nie udało się połączyć z serwerem gry. Spróbuj ponownie.');
                 return;
             }
 
-            // Jeśli Host utworzył świeżą sesję pokoju, resetujemy stan u osób w tym samym kodzie
-            if (incoming.freshRoomAt && incoming.freshRoomAt > (window._roomCreatedFreshAt || 0)) {
-                window._roomCreatedFreshAt = incoming.freshRoomAt;
-                currentRoomSessionId = incoming.sessionId || currentRoomSessionId;
-                wordsPool = Array.isArray(incoming.words) ? [...incoming.words] : [];
-                usedWordIds = new Set(Array.isArray(incoming.usedIds) ? incoming.usedIds : []);
-                roomGuessedFeed = [];
-                roomPlayers = { [myPlayer.id]: { ...myPlayer, lastSeen: now } };
-            }
-
-            if (incoming.hostId) {
-                if (!roomHostId || incoming.hostUpdatedAt > (window._lastHostUpdatedAt || 0)) {
-                    roomHostId = incoming.hostId;
-                    window._lastHostUpdatedAt = incoming.hostUpdatedAt || now;
+            const connection = { client, topic: `czolko_io_pl_v12/room_${attempt.code}`, ready: false, validating: false, resumeTimer: null };
+            roomConnection = connection;
+            client.on('connect', () => {
+                if (roomConnection !== connection) return;
+                client.subscribe(connection.topic, { qos: 1 }, (error, grants) => {
+                    if (roomConnection !== connection || !client.connected || error || grants?.some(grant => grant.qos >= 128)) return;
+                    connection.ready = true;
+                    if (roomAttempt === attempt) probeRoom(attempt);
+                    else if (roomGeneration) {
+                        subscribeRoomClosure(connection);
+                        verifyReturningRoom(connection);
+                    }
+                });
+            });
+            const onDisconnect = () => {
+                if (roomConnection !== connection) return;
+                connection.ready = false;
+                clearTimeout(connection.resumeTimer);
+                setSyncBadge(false);
+            };
+            client.on('close', onDisconnect);
+            client.on('offline', onDisconnect);
+            client.on('error', onDisconnect);
+            client.on('message', (topic, bytes, packet) => {
+                if (roomConnection !== connection) return;
+                const isClosure = roomGeneration && topic === roomClosureTopic(connection);
+                if (!isClosure && (topic !== connection.topic || packet?.retain)) return;
+                let message;
+                try {
+                    message = JSON.parse(bytes.toString());
+                } catch (error) {
+                    return;
                 }
-            }
+                if (isClosure) receiveRoomClosure(message);
+                else handleRoomPacket(message);
+            });
 
-            if (incoming.rules && typeof incoming.rules === 'object') {
-                roomRules = {
-                    blockOwnWords: incoming.rules.blockOwnWords !== false,
-                    avoidRepeats: incoming.rules.avoidRepeats !== false
-                };
-                const blockOwnEl = document.getElementById('block-own-words-toggle');
-                const avoidRepeatsEl = document.getElementById('avoid-repeats-toggle');
-                if (blockOwnEl) blockOwnEl.checked = roomRules.blockOwnWords;
-                if (avoidRepeatsEl) avoidRepeatsEl.checked = roomRules.avoidRepeats;
-            }
+            attempt.deadline = setTimeout(() => {
+                if (roomAttempt !== attempt) return;
+                if (!attempt.connected) failRoomAttempt('Serwer gry nie odpowiada. Spróbuj ponownie.');
+                else if (attempt.mode === 'create') failRoomAttempt('Ten kod jest zajęty. Wybierz inny kod pokoju.');
+                else failRoomAttempt('Pokój nie odpowiada. Sprawdź kod i poproś ekipę o otwarcie gry.');
+            }, ROOM_CONNECT_MS);
+            attempt.probeTimer = setInterval(() => {
+                if (roomAttempt === attempt) probeRoom(attempt);
+            }, 750);
+        }
 
-            if (incoming.security) {
-                roomSecurity = incoming.security;
-                if (roomSecurity.requireWhitelist && Array.isArray(roomSecurity.allowedLogins) && roomSecurity.allowedLogins.length > 0) {
-                    const myLogin = (myPlayer.emailOrLogin || '').toLowerCase();
-                    const myNick = (myPlayer.nick || '').toLowerCase();
-                    if (!roomSecurity.allowedLogins.includes(myLogin) && !roomSecurity.allowedLogins.includes(myNick)) {
-                        showToast('Ten pokój wymaga zatwierdzonego przez Hosta nicku/loginu!', 'error');
-                        leaveRoom();
-                        return;
+        function verifyReturningRoom(connection) {
+            clearTimeout(connection.resumeTimer);
+            connection.validating = true;
+            connection.resumeProbe = createRoomIdentifier('probe_');
+            connection.resumeMembership = null;
+            publishRoomPacket('ROOM_DISCOVER', { mode: 'resume', probe: connection.resumeProbe });
+            connection.resumeTimer = setTimeout(() => {
+                if (roomConnection !== connection || !connection.ready) return;
+                connection.validating = false;
+                if (connection.resumeMembership) {
+                    const membership = connection.resumeMembership;
+                    receiveRoomRoster(membership.roster, membership.departed);
+                    setCurrentRoomHost(membership.hostId);
+                    roomLeaseUntil = Date.now() + ROOM_IDLE_MS;
+                    roomPlayers[myPlayer.id].lastSeen = Date.now();
+                } else if (Date.now() >= roomLeaseUntil) {
+                    expireOwnRoomSession();
+                    return;
+                }
+                if (!maintainRoomPresence()) return;
+                setSyncBadge(true);
+                sendRoomEvent('ROOM_RESYNC');
+                pulseRoom();
+                if (roomStateDirty) broadcastRoomState();
+            }, ROOM_DISCOVERY_MS);
+        }
+
+        function probeRoom(attempt) {
+            if (!publishRoomPacket('ROOM_DISCOVER', { mode: attempt.mode })) return;
+            attempt.connected = true;
+            if (attempt.mode === 'create' && !attempt.creationTimer) {
+                attempt.creationTimer = setTimeout(() => {
+                    attempt.creationTimer = null;
+                    if (roomAttempt !== attempt || attempt.contender || !roomConnection?.ready || !roomConnection.client.connected) return;
+                    activateRoom(attempt, createRoomIdentifier('r_'), myPlayer.id);
+                }, ROOM_DISCOVERY_MS);
+            }
+            if (attempt.candidate) requestRoomEntry(attempt.candidate);
+        }
+
+        function requestRoomEntry(candidate) {
+            publishRoomPacket('ROOM_JOIN', {
+                targetId: candidate.hostId,
+                generation: candidate.roomId,
+                player: publicRoomPlayer(myPlayer)
+            });
+        }
+
+        function activateRoom(attempt, generation, hostId, welcome) {
+            stopRoomAttempt();
+            currentRoomCode = attempt.code;
+            roomGeneration = generation;
+            roomHostId = hostId;
+            subscribeRoomClosure(roomConnection);
+            roomLeaseUntil = Date.now() + ROOM_IDLE_MS;
+            putRoomPlayer(myPlayer.id, publicRoomPlayer(myPlayer, true));
+            if (welcome) {
+                receiveRoomRoster(welcome.roster, welcome.departed);
+                mergeIncomingRoomState(welcome.state, hostId);
+                if (!roomGeneration) return;
+            }
+            renderHeaderAvatar();
+            document.getElementById('header-player-nick').textContent = myPlayer.nick;
+            document.getElementById('header-room-code').textContent = currentRoomCode;
+            document.getElementById('invite-code-inline').textContent = currentRoomCode;
+            document.getElementById('screen-lobby-auth').classList.add('hidden');
+            setSyncBadge(true);
+            switchTab('play');
+            showToast(`Dołączono do pokoju #${currentRoomCode}.`, 'success');
+            if (welcome) sendRoomEvent('PLAYER_PROFILE', { player: publicRoomPlayer(myPlayer, true) });
+            pulseRoom();
+            roomPulseTimer = setInterval(pulseRoom, ROOM_PULSE_MS);
+        }
+
+        function publicRoomPlayer(player, includeAvatar = false) {
+            const fields = {
+                id: player.id,
+                nick: player.nick,
+                avatar: player.avatar,
+                score: player.score,
+                guessedCount: player.guessedCount,
+                passedCount: player.passedCount,
+                isPlayingNow: player.isPlayingNow,
+                currentWordId: player.currentWordId || null
+            };
+            if (includeAvatar) fields.avatarImg = player.avatarImg || null;
+            return fields;
+        }
+
+        function roomPlayerStats(source) {
+            return {
+                score: Number.isFinite(source?.score) ? source.score : 0,
+                guessedCount: Number.isFinite(source?.guessedCount) ? source.guessedCount : 0,
+                passedCount: Number.isFinite(source?.passedCount) ? source.passedCount : 0
+            };
+        }
+
+        function putRoomPlayer(id, source, lastSeen = Date.now()) {
+            if (!ROOM_PLAYER_ID.test(id) || source?.id !== id || departedPlayers.has(id)) return false;
+            const nick = typeof source.nick === 'string' ? source.nick.trim().slice(0, 40) : '';
+            if (!nick) return false;
+            const existing = roomPlayers[id];
+            const avatarImg = source.avatarImg;
+            roomPlayers[id] = {
+                id, nick,
+                avatar: AVATARS.includes(source.avatar) ? source.avatar : AVATARS[0],
+                avatarImg: avatarImg === undefined ? existing?.avatarImg || null
+                    : typeof safeAvatarSrc === 'function' ? safeAvatarSrc(avatarImg) || null
+                    : typeof avatarImg === 'string' && avatarImg.length <= 140000 && /^data:image\/(?:jpeg|png|webp|gif);base64,[a-z0-9+/]+=*$/i.test(avatarImg) ? avatarImg : null,
+                ...roomPlayerStats(source),
+                isPlayingNow: source.isPlayingNow === true,
+                currentWordId: typeof source.currentWordId === 'string' && ROOM_WORD_ID.test(source.currentWordId) ? source.currentWordId : null,
+                lastSeen: Math.max(existing?.lastSeen || 0, lastSeen)
+            };
+            return true;
+        }
+
+        function roomRoster() {
+            return Object.values(roomPlayers).map(player => ({
+                player: publicRoomPlayer(player), age: Date.now() - player.lastSeen
+            }));
+        }
+
+        function receiveRoomRoster(roster, departed) {
+            if (Array.isArray(departed)) {
+                for (const id of departed) {
+                    if (ROOM_PLAYER_ID.test(id) && id !== myPlayer.id) {
+                        departedPlayers.add(id);
+                        delete roomPlayers[id];
                     }
                 }
             }
-
-            if (Array.isArray(incoming.words)) {
-                if (incoming.clearedAt && incoming.clearedAt > (window._lastClearedAt || 0)) {
-                    window._lastClearedAt = incoming.clearedAt;
-                    wordsPool = [...incoming.words];
-                } else {
-                    const existingKeys = new Set(wordsPool.map(w => normalizeWordKey(w.text)));
-                    incoming.words.forEach(w => {
-                        if (w && w.text) {
-                            const key = normalizeWordKey(w.text);
-                            if (key && !existingKeys.has(key)) {
-                                existingKeys.add(key);
-                                wordsPool.unshift({
-                                    ...w,
-                                    id: makeWordIdFromText(w.text),
-                                    normKey: key
-                                });
-                            }
-                        }
-                    });
-                }
-                deduplicateWordsPool();
+            if (!Array.isArray(roster)) return;
+            for (const member of roster) {
+                const id = member?.player?.id;
+                if (id === myPlayer.id || !Number.isFinite(member?.age)) continue;
+                putRoomPlayer(id, member.player, Date.now() - Math.max(0, member.age));
             }
-
-            if (Array.isArray(incoming.usedIds)) {
-                if (incoming.resetUsedAt && incoming.resetUsedAt > (window._lastResetUsedAt || 0)) {
-                    window._lastResetUsedAt = incoming.resetUsedAt;
-                    usedWordIds = new Set(incoming.usedIds);
-                } else {
-                    incoming.usedIds.forEach(id => usedWordIds.add(id));
-                }
-            }
-
-            if (Array.isArray(incoming.guessedFeed)) {
-                if (incoming.historyClearedAt && incoming.historyClearedAt > (window._lastHistoryClearedAt || 0)) {
-                    window._lastHistoryClearedAt = incoming.historyClearedAt;
-                    roomGuessedFeed = [...incoming.guessedFeed];
-                } else {
-                    const existingFeedMap = new Map(roomGuessedFeed.map(f => [f.eventId, f]));
-                    incoming.guessedFeed.forEach(item => {
-                        if (item && item.eventId && !existingFeedMap.has(item.eventId)) {
-                            roomGuessedFeed.unshift(item);
-                        }
-                        if (item && item.wordText) {
-                            usedWordIds.add(normalizeWordKey(item.wordText));
-                            usedWordIds.add(makeWordIdFromText(item.wordText));
-                        }
-                    });
-                    roomGuessedFeed.sort((a, b) => (b.time || 0) - (a.time || 0));
-                    roomGuessedFeed = roomGuessedFeed.slice(0, 80);
-                }
-            }
-
-            if (incoming.players && typeof incoming.players === 'object') {
-                if (incoming.scoresResetAt && incoming.scoresResetAt > (window._lastScoresResetAt || 0)) {
-                    window._lastScoresResetAt = incoming.scoresResetAt;
-                    myPlayer.score = 0;
-                    myPlayer.guessedCount = 0;
-                    myPlayer.passedCount = 0;
-                }
-
-                if (incoming.adminActionAt && incoming.adminActionAt > (window._lastAdminActionAt || 0)) {
-                    window._lastAdminActionAt = incoming.adminActionAt;
-                    roomPlayers = {};
-                    Object.values(incoming.players).forEach(p => {
-                        // Ignorujemy konta nieaktywne od ponad 5 minut
-                        if (p && p.id && p.lastSeen && (now - p.lastSeen <= INACTIVE_TIMEOUT_MS)) {
-                            roomPlayers[p.id] = p;
-                            if (p.id === myPlayer.id) {
-                                myPlayer.score = p.score || 0;
-                                myPlayer.guessedCount = p.guessedCount || 0;
-                                myPlayer.passedCount = p.passedCount || 0;
-                            }
-                        }
-                    });
-                    roomPlayers[myPlayer.id] = { ...myPlayer, lastSeen: now };
-                } else {
-                    Object.values(incoming.players).forEach(p => {
-                        if (!p || !p.id) return;
-                        // Ignorujemy stare konta nieaktywne powyżej 5 minut
-                        if (!p.lastSeen || (now - p.lastSeen > INACTIVE_TIMEOUT_MS)) {
-                            delete roomPlayers[p.id];
-                            return;
-                        }
-                        if (p.id === myPlayer.id) {
-                            roomPlayers[myPlayer.id] = { ...myPlayer, lastSeen: now };
-                        } else {
-                            // Usuwamy ewentualne stare duplikaty tego samego nicku ze starszym ID
-                            Object.keys(roomPlayers).forEach(existingId => {
-                                if (existingId !== p.id && existingId !== myPlayer.id) {
-                                    const ex = roomPlayers[existingId];
-                                    if (ex && ex.nick && p.nick && ex.nick.toLowerCase() === p.nick.toLowerCase()) {
-                                        if ((ex.lastSeen || 0) < (p.lastSeen || 0)) {
-                                            delete roomPlayers[existingId];
-                                        }
-                                    }
-                                }
-                            });
-                            roomPlayers[p.id] = p;
-                        }
-                    });
-                }
-            }
-
-            pruneInactivePlayersAndLobby();
-            updateUI();
         }
 
-        async function broadcastRoomState(extraMeta = {}) {
-            if (!currentRoomCode) return;
-            if (!roomHostId) roomHostId = myPlayer.id;
-            myPlayer.lastSeen = Date.now();
-            myPlayer.isHost = (roomHostId === myPlayer.id);
-            roomPlayers[myPlayer.id] = { ...myPlayer };
-
-            pruneInactivePlayersAndLobby();
-
-            // Jeśli podczas trwania mojej rundy ktoś inny w tym samym ułamku sekundy wylosował lub odgadł to samo hasło,
-            // i ma wyższy priorytet ID, automatycznie przeskakujemy na inne wolne hasło, żeby nigdy nie było duplikatu!
-            if (myPlayer.isPlayingNow && currentActiveWord && !isWaitingForNextWord) {
-                const myKey = normalizeWordKey(currentActiveWord.text);
-                const conflictPlayer = Object.values(roomPlayers).find(p =>
-                    p && p.id !== myPlayer.id && p.isPlayingNow &&
-                    (p.currentWordKey === myKey || p.currentWordId === currentActiveWord.id) &&
-                    p.id < myPlayer.id
-                );
-                if (conflictPlayer) {
-                    pickNextRandomWord();
-                }
-            }
-
-            updateUI();
+        function playerIsPresent(player, now) {
+            return Boolean(player && now - player.lastSeen < ROOM_IDLE_MS);
         }
 
-        async function broadcastRoomState(extraMeta = {}) {
-            if (!currentRoomCode) return;
-            if (!roomHostId) roomHostId = myPlayer.id;
-            myPlayer.lastSeen = Date.now();
-            myPlayer.isHost = (roomHostId === myPlayer.id);
-            roomPlayers[myPlayer.id] = { ...myPlayer };
+        function expireOwnRoomSession() {
+            leaveRoom(false);
+            showToast('Sesja w pokoju wygasła po 5 minutach bez połączenia.', 'warning');
+        }
 
-            deduplicateWordsPool();
-            pruneInactivePlayersAndLobby();
+        function maintainRoomPresence() {
+            if (!roomGeneration || roomClosing || !roomConnection?.ready || roomConnection.validating) return false;
+            const now = Date.now();
+            const players = Object.values(roomPlayers);
+            if (now >= roomLeaseUntil) {
+                // Host mógł zachować tę sesję podczas rundy rozpoczętej po rozłączeniu.
+                verifyReturningRoom(roomConnection);
+                return false;
+            }
+            const roundIsLive = players.some(player => player.isPlayingNow && playerIsPresent(player, now));
+            if (!roundIsLive) {
+                for (const player of players) {
+                    if (player.id !== myPlayer.id && !playerIsPresent(player, now)) removeRoomMember(player.id);
+                }
+            }
+            refreshRoomHost(now);
+            return true;
+        }
 
-            const statePayload = {
-                roomCode: currentRoomCode,
-                sessionId: currentRoomSessionId,
-                hostId: roomHostId,
-                rules: roomRules,
-                words: wordsPool,
-                usedIds: Array.from(usedWordIds),
-                players: roomPlayers,
-                guessedFeed: roomGuessedFeed.slice(0, 60),
-                security: roomSecurity,
-                updatedAt: Date.now(),
-                ...extraMeta
-            };
+        function pulseRoom() {
+            if (maintainRoomPresence() && isRoomConnected()) {
+                publishRoomPacket('PLAYER_PULSE', { playing: myPlayer.isPlayingNow }, 0);
+            }
+        }
 
-            publishMqttPacket({ type: 'ROOM_STATE', roomCode: currentRoomCode, state: statePayload });
+        function removeRoomMember(id) {
+            if (!roomPlayers[id]) return;
+            departedPlayers.add(id);
+            delete roomPlayers[id];
+            scheduleRoomRender();
+        }
 
-            if (cloudDb && cloudUser && cloudFns) {
+        function setCurrentRoomHost(hostId) {
+            if (hostId === roomHostId) return;
+            if (roomHostId) formerRoomHosts.add(roomHostId);
+            roomHostId = hostId;
+            formerRoomHosts.delete(hostId);
+            scheduleRoomRender();
+        }
+
+        function refreshRoomHost(now = Date.now()) {
+            if (playerIsPresent(roomPlayers[roomHostId], now)) return;
+            const successor = Object.values(roomPlayers).filter(player => playerIsPresent(player, now))
+                .map(player => player.id).sort()[0];
+            if (!successor || successor === roomHostId) return;
+            setCurrentRoomHost(successor);
+            if (isRoomHost()) sendRoomRoster();
+        }
+
+        function sendRoomRoster(targetId = '') {
+            sendRoomEvent('ROOM_ROSTER', {
+                targetId, roster: roomRoster(), departed: [...departedPlayers],
+                formerHosts: [...formerRoomHosts], state: buildRoomState()
+            });
+        }
+
+        function roomClosureTopic(connection) {
+            return connection.topic + '/closed/' + roomGeneration;
+        }
+
+        function subscribeRoomClosure(connection) {
+            connection.client.subscribe(roomClosureTopic(connection), { qos: 1 });
+        }
+
+        function receiveRoomClosure(message) {
+            if (message?.type !== 'ROOM_CLOSED' || message.roomId !== roomGeneration || !ROOM_PLAYER_ID.test(message.senderId)) return;
+            const isCurrentHost = message.senderId === roomHostId;
+            const isSuccessor = !formerRoomHosts.has(message.senderId) && Array.isArray(message.formerHosts) && message.formerHosts.includes(roomHostId);
+            if (!isCurrentHost && !isSuccessor) return;
+            if (message.senderId === myPlayer.id) return; // Własne zamknięcie kończymy po potwierdzeniu zapisu brokera.
+            leaveRoom(false);
+            showToast('Host zamknął lobby.', 'warning');
+        }
+
+        window.adminDeleteRoom = async function() {
+            if (!isRoomHost() || !isRoomConnected()) {
+                showToast('Tylko połączony host może usunąć lobby.', 'warning');
+                return false;
+            }
+            const connection = roomConnection;
+            const generation = roomGeneration;
+            const message = { type: 'ROOM_CLOSED', roomId: generation, senderId: myPlayer.id, formerHosts: [...formerRoomHosts] };
+            roomClosing = true;
+            return new Promise(resolve => {
+                let timedOut = false;
+                const isCurrent = () => roomConnection === connection && roomGeneration === generation;
+                const finish = error => {
+                    clearTimeout(timeout);
+                    if (!isCurrent()) {
+                        resolve(false);
+                        return;
+                    }
+                    if (error && !timedOut) {
+                        roomClosing = false;
+                        showToast('Nie udało się usunąć lobby. Spróbuj ponownie.', 'error');
+                        resolve(false);
+                        return;
+                    }
+                    if (error) return;
+                    leaveRoom(false);
+                    showToast('Lobby usunięte. Możesz utworzyć nowe.', 'success');
+                    resolve(true);
+                };
+                const timeout = setTimeout(() => {
+                    finish(new Error('PUBACK timeout'));
+                    timedOut = true;
+                }, ROOM_CLOSE_TIMEOUT_MS);
                 try {
-                    const docId = `room_v11_${currentRoomCode}`;
-                    const roomRef = cloudFns.doc(cloudDb, 'artifacts', appId, 'public', 'data', 'czolko_rooms', docId);
-                    await cloudFns.setDoc(roomRef, statePayload);
-                } catch (e) {}
+                    connection.client.publish(roomClosureTopic(connection), JSON.stringify(message), {
+                        qos: 1, retain: true, properties: { messageExpiryInterval: ROOM_CLOSE_TTL_SECONDS }
+                    }, finish);
+                } catch (error) {
+                    finish(error);
+                }
+            });
+        };
+
+        function playerCanJoin(nick) {
+            return !roomSecurity.requireWhitelist || roomSecurity.allowedLogins.includes(nick.trim().toLowerCase());
+        }
+
+        function handleRoomPacket(message) {
+            if (!message || typeof message.type !== 'string' || !ROOM_PLAYER_ID.test(message.senderId)) return;
+            const { type, roomId, senderId, targetId } = message;
+            if (roomAttempt) {
+                const attempt = roomAttempt;
+                if (senderId === myPlayer.id) return;
+                if (type === 'ROOM_DISCOVER' && attempt.mode === 'create' && message.mode === 'create') {
+                    if (senderId < myPlayer.id) attempt.contender = true;
+                    else publishRoomPacket('ROOM_CONTENDER', { targetId: senderId });
+                } else if (type === 'ROOM_CONTENDER' && targetId === myPlayer.id && senderId < myPlayer.id) {
+                    attempt.contender = true;
+                } else if (type === 'ROOM_FOUND' && targetId === myPlayer.id && ROOM_GENERATION_ID.test(roomId) && ROOM_PLAYER_ID.test(message.hostId)) {
+                    if (attempt.mode === 'create') failRoomAttempt('Ten kod jest zajęty. Wybierz inny kod pokoju.');
+                    else if (!attempt.candidate || attempt.candidate.roomId !== roomId || attempt.candidate.hostId !== message.hostId) {
+                        attempt.candidate = { roomId, hostId: message.hostId };
+                        requestRoomEntry(attempt.candidate);
+                    }
+                } else if (attempt.candidate && targetId === myPlayer.id && roomId === attempt.candidate.roomId && senderId === attempt.candidate.hostId) {
+                    if (type === 'ROOM_DENIED') failRoomAttempt('Host ograniczył dostęp do pokoju. Użyj nicku z listy VIP.');
+                    if (type === 'ROOM_ADMIT') {
+                        activateRoom(attempt, roomId, senderId, message);
+                    }
+                }
+                return;
+            }
+
+            if (roomClosing) return;
+            if (type === 'ROOM_FOUND' && roomConnection.validating && targetId === myPlayer.id
+                && message.probe === roomConnection.resumeProbe && ROOM_GENERATION_ID.test(roomId)) {
+                if (roomId !== roomGeneration) {
+                    leaveRoom(false);
+                    showToast('Ten kod należy już do innego pokoju. Dołącz ponownie.', 'warning');
+                } else if (senderId === message.hostId
+                    && (senderId === roomHostId || !playerIsPresent(roomPlayers[roomHostId], Date.now()))) {
+                    if (message.resumeAccepted === true && Array.isArray(message.roster)) roomConnection.resumeMembership = message;
+                    else if (message.resumeAccepted === false && senderId === roomHostId) expireOwnRoomSession();
+                }
+                return;
+            }
+            if (!maintainRoomPresence()) return;
+            if (senderId === myPlayer.id) {
+                if (type === 'PLAYER_PULSE' && roomId === roomGeneration) {
+                    roomLeaseUntil = Date.now() + ROOM_IDLE_MS;
+                    roomPlayers[myPlayer.id].lastSeen = Date.now();
+                }
+                return;
+            }
+            if (type === 'ROOM_DISCOVER') {
+                if (!roomConnection.validating) {
+                    const resumeAccepted = message.mode === 'resume' && roomId === roomGeneration && isRoomHost()
+                        ? Boolean(roomPlayers[senderId]) : undefined;
+                    const membership = resumeAccepted ? { roster: roomRoster(), departed: [...departedPlayers] } : {};
+                    publishRoomPacket('ROOM_FOUND', { ...membership, targetId: senderId, hostId: roomHostId, probe: message.probe, resumeAccepted });
+                }
+                return;
+            }
+            if (type === 'ROOM_JOIN' && message.generation === roomGeneration && targetId === myPlayer.id && roomHostId === myPlayer.id) {
+                const profile = message.player;
+                if (typeof profile?.nick !== 'string' || !profile.nick.trim() || departedPlayers.has(senderId)) return;
+                if (!playerCanJoin(profile.nick)) {
+                    sendRoomEvent('ROOM_DENIED', { targetId: senderId });
+                    return;
+                }
+                if (!roomPlayers[senderId]) {
+                    const entrant = { ...profile, ...roomPlayerStats(), isPlayingNow: false, currentWordId: null };
+                    if (!putRoomPlayer(senderId, entrant)) return;
+                }
+                sendRoomEvent('ROOM_ADMIT', {
+                    targetId: senderId, player: publicRoomPlayer(roomPlayers[senderId]), roster: roomRoster(),
+                    departed: [...departedPlayers], state: buildRoomState()
+                });
+                sendRoomEvent('PLAYER_PROFILE', { targetId: senderId, player: publicRoomPlayer(myPlayer, true) });
+                scheduleRoomRender();
+                return;
+            }
+            if (roomId !== roomGeneration) return;
+            if (!roomPlayers[senderId]) {
+                if (type === 'ROOM_RESYNC' && roomHostId === myPlayer.id && departedPlayers.has(senderId)) sendRoomRoster(senderId);
+                return;
+            }
+
+            if (type === 'PLAYER_PULSE') {
+                const player = roomPlayers[senderId];
+                player.lastSeen = Date.now();
+                if (typeof message.playing === 'boolean' && player.isPlayingNow !== message.playing) {
+                    player.isPlayingNow = message.playing;
+                    if (!message.playing) player.currentWordId = null;
+                    scheduleRoomRender();
+                    if (!message.playing) maintainRoomPresence();
+                }
+            } else if (type === 'PLAYER_LEFT') {
+                removeRoomMember(senderId);
+                refreshRoomHost();
+            } else if (type === 'PLAYER_KICKED' && senderId === roomHostId && ROOM_PLAYER_ID.test(targetId)) {
+                if (targetId === myPlayer.id) {
+                    leaveRoom(false);
+                    showToast('Host usunął Cię z pokoju.', 'warning');
+                } else removeRoomMember(targetId);
+            } else if (type === 'ROOM_ADMIT' && senderId === roomHostId && !roomPlayers[targetId]) {
+                if (putRoomPlayer(targetId, message.player)) {
+                    sendRoomEvent('PLAYER_PROFILE', { targetId, player: publicRoomPlayer(myPlayer, true) });
+                    scheduleRoomRender();
+                }
+            } else if (type === 'PLAYER_PROFILE' && (!targetId || targetId === myPlayer.id)) {
+                if (putRoomPlayer(senderId, { ...message.player, ...roomPlayerStats(roomPlayers[senderId]) })) scheduleRoomRender();
+            } else if (type === 'ROOM_RESYNC') {
+                sendRoomEvent('PLAYER_PROFILE', { targetId: senderId, player: publicRoomPlayer(myPlayer, true) });
+                if (roomHostId === myPlayer.id) sendRoomRoster(senderId);
+            } else if (type === 'ROOM_ROSTER' && (!targetId || targetId === myPlayer.id)) {
+                const handedOff = !formerRoomHosts.has(senderId) && (
+                    (Array.isArray(message.departed) && message.departed.includes(roomHostId))
+                    || (!playerIsPresent(roomPlayers[roomHostId], Date.now())
+                        && Array.isArray(message.formerHosts) && message.formerHosts.includes(roomHostId))
+                );
+                if (senderId !== roomHostId && !handedOff) return;
+                if (Array.isArray(message.departed) && message.departed.includes(myPlayer.id)) {
+                    leaveRoom(false);
+                    showToast('Twoja sesja w pokoju wygasła. Dołącz ponownie.', 'warning');
+                    return;
+                }
+                receiveRoomRoster(message.roster, message.departed);
+                if (handedOff) setCurrentRoomHost(senderId);
+                if (Array.isArray(message.formerHosts)) {
+                    for (const id of message.formerHosts) {
+                        if (id !== roomHostId && ROOM_PLAYER_ID.test(id)) formerRoomHosts.add(id);
+                    }
+                }
+                mergeIncomingRoomState(message.state, senderId);
+                scheduleRoomRender();
+            } else if (type === 'ROOM_STATE') {
+                mergeIncomingRoomState(message.state, senderId);
+                if (message.state?.player?.isPlayingNow === false) maintainRoomPresence();
+            } else if (type.startsWith('GAME_') && !roomConnection.validating && typeof handleGameRoomEvent === 'function') {
+                handleGameRoomEvent(message);
             }
         }
+
+        function rememberRemovedRoomWord(id) {
+            roomWordChanges.set(id, [Math.max(Date.now(), (roomWordChanges.get(id)?.[0] || 0) + 1), true]);
+        }
+
+        function restoreRemovedRoomWord(id) {
+            const previous = roomWordChanges.get(id);
+            if (previous?.[1]) roomWordChanges.set(id, [Math.max(Date.now(), previous[0] + 1), false]);
+        }
+
+        function mergeRoomWords(incoming) {
+            if (!Array.isArray(incoming.words)) return;
+            const clearedAt = Number.isFinite(incoming.clearedAt) ? incoming.clearedAt : 0;
+            if (clearedAt < roomMeta('clearedAt')) return;
+            if (clearedAt > roomMeta('clearedAt')) {
+                setRoomMeta('clearedAt', clearedAt);
+                roomWordChanges.clear();
+                wordsPool = [];
+            }
+            if (Array.isArray(incoming.wordChanges)) {
+                for (const entry of incoming.wordChanges) {
+                    if (!Array.isArray(entry)) continue;
+                    const [id, time, removed] = entry;
+                    if (!ROOM_WORD_ID.test(id) || !Number.isFinite(time) || typeof removed !== 'boolean') continue;
+                    const existing = roomWordChanges.get(id);
+                    if (!existing || time > existing[0] || (time === existing[0] && removed)) roomWordChanges.set(id, [time, removed]);
+                }
+            }
+            wordsPool = wordsPool.filter(word => !roomWordChanges.get(word.id)?.[1]);
+            const wordsById = new Map(wordsPool.map((word, index) => [word.id, index]));
+            for (const word of incoming.words) {
+                if (!word || typeof word.id !== 'string' || !ROOM_WORD_ID.test(word.id) || typeof word.text !== 'string' || !word.text.trim() || word.text.length > 240) continue;
+                if (roomWordChanges.get(word.id)?.[1] || (typeof roomWordId === 'function' && word.id !== roomWordId(word.text))) continue;
+                const index = wordsById.get(word.id);
+                if (index === undefined) {
+                    wordsById.set(word.id, wordsPool.length);
+                    wordsPool.push(word);
+                } else if (roomWordOrder(word) < roomWordOrder(wordsPool[index])) {
+                    wordsPool[index] = word;
+                }
+            }
+        }
+
+        function roomWordOrder(word) {
+            return JSON.stringify([word.authorId, word.text, word.category, word.author, word.authorNick]);
+        }
+
+        function mergeRoomHistory(incoming, fromHost) {
+            if (!Array.isArray(incoming.guessedFeed)) return;
+            const clearedAt = Number.isFinite(incoming.historyClearedAt) ? incoming.historyClearedAt : 0;
+            if (clearedAt < roomMeta('historyClearedAt') || (!fromHost && clearedAt > roomMeta('historyClearedAt'))) return;
+            if (clearedAt > roomMeta('historyClearedAt')) {
+                setRoomMeta('historyClearedAt', clearedAt);
+                roomGuessedFeed = [];
+            }
+            const knownIds = new Set(roomGuessedFeed.map(item => item.eventId));
+            for (const item of incoming.guessedFeed) {
+                if (typeof item?.eventId !== 'string' || knownIds.has(item.eventId)) continue;
+                knownIds.add(item.eventId);
+                roomGuessedFeed.push(item);
+            }
+            roomGuessedFeed.sort((a, b) => (b.time || 0) - (a.time || 0));
+            roomGuessedFeed = roomGuessedFeed.slice(0, 80);
+        }
+
+        function mergeIncomingRoomState(incoming, senderId) {
+            const sender = roomPlayers[senderId];
+            if (!sender || !Number.isSafeInteger(incoming?.version) || incoming.version <= (roomStateVersions.get(senderId) || 0)) return;
+            roomStateVersions.set(senderId, incoming.version);
+            const fromHost = senderId === roomHostId;
+            mergeRoomWords(incoming);
+            mergeRoomHistory(incoming, fromHost);
+            // Zużycie hasła jest nieodwracalne w obrębie sesji. Każdy uczestnik przekazuje znany rejestr.
+            if (Array.isArray(incoming.usedIds)) {
+                for (const id of incoming.usedIds) {
+                    if (typeof id === 'string' && ROOM_WORD_ID.test(id)) usedWordIds.add(id);
+                }
+            }
+            if (fromHost) {
+                if (incoming.rules) roomRules = { blockOwnWords: incoming.rules.blockOwnWords !== false };
+                if (Array.isArray(incoming.security?.allowedLogins)) {
+                    roomSecurity = { requireWhitelist: incoming.security.requireWhitelist === true, allowedLogins: incoming.security.allowedLogins };
+                    if (!playerCanJoin(myPlayer.nick)) {
+                        leaveRoom();
+                        showToast('Host ograniczył dostęp do pokoju do nicków z listy VIP.', 'warning');
+                        return;
+                    }
+                }
+                if (incoming.adminActionAt > roomMeta('adminActionAt')) {
+                    setRoomMeta('adminActionAt', incoming.adminActionAt);
+                    roomScoreOverrides = incoming.scoreOverrides || {};
+                    for (const [id, score] of Object.entries(roomScoreOverrides)) {
+                        if (roomPlayers[id]) Object.assign(roomPlayers[id], roomPlayerStats(score));
+                        if (id === myPlayer.id) Object.assign(myPlayer, roomPlayerStats(score));
+                    }
+                }
+            }
+            if (incoming.player) {
+                if (incoming.adminActionAt >= roomMeta('adminActionAt')) Object.assign(sender, roomPlayerStats(incoming.player));
+                sender.isPlayingNow = incoming.player.isPlayingNow === true;
+                sender.currentWordId = typeof incoming.player.currentWordId === 'string' && ROOM_WORD_ID.test(incoming.player.currentWordId)
+                    ? incoming.player.currentWordId : null;
+            }
+            scheduleRoomRender();
+        }
+
+        function buildRoomState() {
+            const state = {
+                version: ++roomStateVersion,
+                player: { ...roomPlayerStats(myPlayer), isPlayingNow: myPlayer.isPlayingNow, currentWordId: myPlayer.currentWordId || null },
+                words: wordsPool,
+                usedIds: [...usedWordIds],
+                wordChanges: Array.from(roomWordChanges, ([id, [time, removed]]) => [id, time, removed]),
+                guessedFeed: roomGuessedFeed.slice(0, 60),
+                clearedAt: roomMeta('clearedAt'),
+                historyClearedAt: roomMeta('historyClearedAt'),
+                adminActionAt: roomMeta('adminActionAt')
+            };
+            if (roomHostId === myPlayer.id) {
+                Object.assign(state, {
+                    rules: roomRules,
+                    security: roomSecurity,
+                    scoreOverrides: roomScoreOverrides
+                });
+            }
+            return state;
+        }
+
+        function broadcastRoomState(extraMeta = {}) {
+            if (!currentRoomCode) return false;
+            if (extraMeta.clearedAt) roomWordChanges.clear();
+            putRoomPlayer(myPlayer.id, publicRoomPlayer(myPlayer, true), roomPlayers[myPlayer.id]?.lastSeen || Date.now());
+            if (extraMeta.adminActionAt && roomHostId === myPlayer.id) {
+                roomScoreOverrides = Object.fromEntries(Object.values(roomPlayers).map(player => [player.id, roomPlayerStats(player)]));
+            }
+            roomStateDirty = !sendRoomEvent('ROOM_STATE', { state: buildRoomState() });
+            if (!myPlayer.isPlayingNow) maintainRoomPresence();
+            return !roomStateDirty;
+        }
+
+        window.addEventListener('pagehide', () => {
+            if (currentRoomCode) leaveRoom();
+            else if (roomAttempt) disconnectRoom(false);
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && roomGeneration) pulseRoom();
+        });
 
         // --- ZAKŁADKI (4 PODSTRONY: GRAJ / BAZA HASEŁ / RANKINGI / ADMIN) ---
         window.switchTab = function(tab) {
+            currentTab = tab;
             const viewPlay = document.getElementById('view-play');
             const viewWords = document.getElementById('view-words');
             const viewRanking = document.getElementById('view-ranking');
@@ -1963,7 +2327,7 @@
                 info: 'bg-indigo-600 border-indigo-400 text-white'
             };
             toast.className = `${styles[type] || styles.info} border-2 px-4 py-3 rounded-2xl shadow-2xl font-bold text-sm flex items-center justify-between gap-2 transition-all duration-300`;
-            toast.innerHTML = `<span>${message}</span>`;
+            toast.textContent = message;
             container.appendChild(toast);
 
             setTimeout(() => {
@@ -1984,30 +2348,26 @@
             });
         };
 
+        function roomWordId(text) {
+            const normalized = text.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+            return 'w_' + Array.from(normalized, char => char.codePointAt(0).toString(16)).join('-');
+        }
+
         window.handleAddWord = function(e) {
             e.preventDefault();
             const input = document.getElementById('new-word-input');
-            const text = input.value.trim().replace(/\s+/g, ' ');
+            const text = input.value.trim();
             if (!text) return;
 
-            const normKey = normalizeWordKey(text);
-            const canonicalId = makeWordIdFromText(text);
-
-            if (wordsPool.some(w => normalizeWordKey(w.text) === normKey)) {
-                showToast(`Hasło „${text}” już jest w worku ekipy! Nie można dodać duplikatu.`, 'warning');
-                input.value = '';
-                return;
-            }
-
-            if (usedWordIds.has(normKey) || usedWordIds.has(canonicalId)) {
-                showToast(`Hasło „${text}” już było grane w tej sesji!`, 'warning');
+            const id = roomWordId(text);
+            if (wordsPool.some(w => w.id === id)) {
+                showToast('To hasło już jest w worku ekipy!', 'warning');
                 input.value = '';
                 return;
             }
 
             const newEntry = {
-                id: canonicalId,
-                normKey: normKey,
+                id,
                 text: text,
                 category: selectedCategory,
                 author: `${myPlayer.nick || 'Gracz'}`,
@@ -2015,8 +2375,8 @@
                 authorNick: (myPlayer.nick || '').toLowerCase()
             };
 
+            restoreRemovedRoomWord(id);
             wordsPool.unshift(newEntry);
-            deduplicateWordsPool();
             input.value = '';
             updateUI();
             broadcastRoomState();
@@ -2053,12 +2413,14 @@
             ];
 
             let added = 0;
+            const existingIds = new Set(wordsPool.map(word => word.id));
             tiktokWords.forEach(item => {
-                const normKey = normalizeWordKey(item.text);
-                if (!wordsPool.some(w => normalizeWordKey(w.text) === normKey)) {
+                const id = roomWordId(item.text);
+                if (!existingIds.has(id)) {
+                    existingIds.add(id);
+                    restoreRemovedRoomWord(id);
                     wordsPool.push({
-                        id: makeWordIdFromText(item.text),
-                        normKey: normKey,
+                        id,
                         text: item.text,
                         category: item.category,
                         author: '🎲 Losowa Paczka',
@@ -2069,27 +2431,21 @@
                 }
             });
 
-            deduplicateWordsPool();
             updateUI();
             broadcastRoomState();
             showToast(`Dorzucono ${added} losowych haseł (każdy może je wylosować)!`, 'success');
         };
 
         window.removeWord = function(id) {
-            const target = wordsPool.find(w => w.id === id);
+            if (!wordsPool.some(word => word.id === id)) return;
+            rememberRemovedRoomWord(id);
             wordsPool = wordsPool.filter(w => w.id !== id);
-            usedWordIds.delete(id);
-            if (target && target.text) {
-                usedWordIds.delete(normalizeWordKey(target.text));
-                usedWordIds.delete(makeWordIdFromText(target.text));
-            }
             updateUI();
             broadcastRoomState();
         };
 
         window.clearAllWords = function() {
             wordsPool = [];
-            usedWordIds.clear();
             window._lastClearedAt = Date.now();
             updateUI();
             broadcastRoomState({ clearedAt: window._lastClearedAt });
@@ -2141,46 +2497,38 @@
         window.confirmImportWords = function() {
             const raw = document.getElementById('import-textarea').value.trim();
             if (!raw) return;
-            let imported = 0;
+            let entries;
             try {
-                const decoded = JSON.parse(decodeURIComponent(atob(raw)));
-                if (Array.isArray(decoded)) {
-                    decoded.forEach(item => {
-                        const normKey = normalizeWordKey(item.t);
-                        if (normKey && !wordsPool.some(w => normalizeWordKey(w.text) === normKey)) {
-                            wordsPool.push({
-                                id: makeWordIdFromText(item.t),
-                                normKey: normKey,
-                                text: item.t.trim(),
-                                category: item.c || '😎 Osoba / Ekipa',
-                                author: item.a || myPlayer.nick,
-                                authorId: item.aid || 'IMPORTED',
-                                authorNick: item.an || ''
-                            });
-                            imported++;
-                        }
-                    });
-                }
-            } catch (e) {
-                const parts = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-                parts.forEach(p => {
-                    const normKey = normalizeWordKey(p);
-                    if (normKey && !wordsPool.some(w => normalizeWordKey(w.text) === normKey)) {
-                        wordsPool.push({
-                            id: makeWordIdFromText(p),
-                            normKey: normKey,
-                            text: p,
-                            category: '😎 Osoba / Ekipa',
-                            author: myPlayer.nick || 'Import',
-                            authorId: 'IMPORTED',
-                            authorNick: ''
-                        });
-                        imported++;
-                    }
-                });
+                entries = JSON.parse(decodeURIComponent(atob(raw)));
+            } catch {
+                entries = raw.split(/[\n,]+/).map(t => ({ t }));
+            }
+            if (!Array.isArray(entries)) {
+                showToast('Ten kod paczki haseł jest nieprawidłowy.', 'warning');
+                return;
             }
 
-            deduplicateWordsPool();
+            let imported = 0;
+            const existingIds = new Set(wordsPool.map(word => word.id));
+            for (const item of entries) {
+                if (typeof item?.t !== 'string') continue;
+                const text = item.t.trim();
+                if (!text || text.length > 240) continue;
+                const id = roomWordId(text);
+                if (existingIds.has(id)) continue;
+                existingIds.add(id);
+                restoreRemovedRoomWord(id);
+                wordsPool.push({
+                    id,
+                    text,
+                    category: typeof item.c === 'string' && item.c ? item.c.slice(0, 80) : '😎 Osoba / Ekipa',
+                    author: typeof item.a === 'string' && item.a ? item.a.slice(0, 80) : myPlayer.nick,
+                    authorId: typeof item.aid === 'string' ? item.aid.slice(0, 80) : 'IMPORTED',
+                    authorNick: typeof item.an === 'string' ? item.an.slice(0, 40).toLowerCase() : ''
+                });
+                imported++;
+            }
+
             closeImportModal();
             updateUI();
             broadcastRoomState();
@@ -2190,18 +2538,15 @@
         // --- SYNCHRONIZACJA ZASAD POKOJU PRZEZ HOSTA ORAZ FUNKCJE ADMINISTRATORA ---
         window.handleHostRuleChange = function() {
             const blockOwnEl = document.getElementById('block-own-words-toggle');
-            const avoidRepeatsEl = document.getElementById('avoid-repeats-toggle');
 
             if (!isRoomHost()) {
                 if (blockOwnEl) blockOwnEl.checked = roomRules.blockOwnWords;
-                if (avoidRepeatsEl) avoidRepeatsEl.checked = roomRules.avoidRepeats;
                 showToast('Tylko Host (Administrator pokoju) może zmieniać zasady gry!', 'warning');
                 return;
             }
 
             roomRules = {
-                blockOwnWords: blockOwnEl ? blockOwnEl.checked : true,
-                avoidRepeats: avoidRepeatsEl ? avoidRepeatsEl.checked : true
+                blockOwnWords: blockOwnEl ? blockOwnEl.checked : true
             };
 
             updateUI();
@@ -2209,17 +2554,9 @@
             showToast('Zasady pokoju zostały zaktualizowane u wszystkich graczy!', 'info');
         };
 
-        window.claimRoomHost = function() {
-            roomHostId = myPlayer.id;
-            window._lastHostUpdatedAt = Date.now();
-            updateUI();
-            broadcastRoomState({ hostUpdatedAt: window._lastHostUpdatedAt });
-            showToast('Przejąłeś uprawnienia Hosta / Administratora pokoju!', 'success');
-        };
-
         window.adminAdjustPlayerScore = function(playerId, delta) {
             if (!isRoomHost()) {
-                showToast('Tylko Host / Administrator może edytować punkty! Kliknij "Przejmij rolę Admina".', 'warning');
+                showToast('Tylko host może edytować punkty.', 'warning');
                 return;
             }
             const target = roomPlayers[playerId];
@@ -2268,12 +2605,13 @@
                 showToast('Nie możesz usunąć samego siebie!', 'warning');
                 return;
             }
-            const targetNick = roomPlayers[playerId]?.nick || 'Gracz';
-            delete roomPlayers[playerId];
-
-            window._lastAdminActionAt = Date.now();
+            if (!roomPlayers[playerId] || !sendRoomEvent('PLAYER_KICKED', { targetId: playerId })) {
+                showToast('Nie udało się usunąć gracza. Sprawdź połączenie.', 'warning');
+                return;
+            }
+            const targetNick = roomPlayers[playerId].nick;
+            removeRoomMember(playerId);
             updateUI();
-            broadcastRoomState({ adminActionAt: window._lastAdminActionAt });
             showToast(`Usunięto gracza ${targetNick} z listy pokoju.`, 'warning');
         };
 
@@ -2291,13 +2629,9 @@
             myPlayer.guessedCount = 0;
             myPlayer.passedCount = 0;
 
-            window._lastScoresResetAt = Date.now();
             window._lastAdminActionAt = Date.now();
             updateUI();
-            broadcastRoomState({
-                scoresResetAt: window._lastScoresResetAt,
-                adminActionAt: window._lastAdminActionAt
-            });
+            broadcastRoomState({ adminActionAt: window._lastAdminActionAt });
             showToast('Ranking wszystkich graczy został zresetowany do 0 pkt!', 'success');
         };
 
@@ -2307,79 +2641,79 @@
                 return;
             }
             roomGuessedFeed = [];
-            usedWordIds.clear();
             window._lastHistoryClearedAt = Date.now();
-            window._lastResetUsedAt = Date.now();
             updateUI();
-            broadcastRoomState({
-                historyClearedAt: window._lastHistoryClearedAt,
-                resetUsedAt: window._lastResetUsedAt
-            });
-            showToast('Wyczyszczono historię odgadniętych haseł i przywrócono słowa do puli!', 'success');
+            broadcastRoomState({ historyClearedAt: window._lastHistoryClearedAt });
+            showToast('Wyczyszczono historię odgadniętych haseł.', 'success');
         };
 
-        window.resetUsedWords = function() {
+        window.openDeleteRoomModal = function() {
             if (!isRoomHost()) {
-                showToast('Tylko Host pokoju może przywrócić zużyte hasła dla wszystkich!', 'warning');
+                showToast('Tylko host może usunąć lobby.', 'warning');
                 return;
             }
-            usedWordIds.clear();
-            window._lastResetUsedAt = Date.now();
-            updateUI();
-            broadcastRoomState({ resetUsedAt: window._lastResetUsedAt });
-            showToast('Wszystkie zużyte hasła wróciły do gry!', 'info');
+            const modal = document.getElementById('modal-delete-room');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('delete-room-cancel-btn').focus();
         };
 
-        function isWordCreatedByMe(word) {
-            if (!word) return false;
-            if (word.authorId && word.authorId === myPlayer.id) return true;
-            if (word.authorNick && myPlayer.nick && word.authorNick === myPlayer.nick.toLowerCase()) return true;
-            return false;
+        window.closeDeleteRoomModal = function() {
+            if (document.getElementById('delete-room-confirm-btn').disabled) return;
+            const modal = document.getElementById('modal-delete-room');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('delete-room-trigger-btn').focus();
+        };
+
+        window.confirmDeleteRoom = async function() {
+            const modal = document.getElementById('modal-delete-room');
+            const confirmButton = document.getElementById('delete-room-confirm-btn');
+            const cancelButton = document.getElementById('delete-room-cancel-btn');
+            if (modal.classList.contains('hidden') || confirmButton.disabled) return;
+            confirmButton.disabled = true;
+            cancelButton.disabled = true;
+            confirmButton.textContent = 'Usuwanie…';
+            try {
+                await adminDeleteRoom();
+            } finally {
+                confirmButton.disabled = false;
+                cancelButton.disabled = false;
+                confirmButton.textContent = 'Usuń lobby';
+                if (!modal.classList.contains('hidden')) cancelButton.focus();
+            }
+        };
+
+        function isWordCreatedBy(word, player) {
+            return word.authorId === player.id
+                || Boolean(word.authorNick && word.authorNick === player.nick?.toLowerCase());
         }
 
-        function getAvailableWordsForMe() {
-            deduplicateWordsPool();
+        function getAvailableWordsFor(player) {
             const blockOwn = roomRules.blockOwnWords !== false;
-            const seenInFilter = new Set();
-
-            return wordsPool.filter(w => {
-                if (!w || !w.text) return false;
-                const key = normalizeWordKey(w.text);
-                if (!key || seenInFilter.has(key)) return false;
-
-                // 1. Każde wylosowane lub zagrane raz hasło (po ID lub po tekście) odpada na stałe
-                if (isWordAlreadyUsedAnywhere(w)) return false;
-
-                // 2. Jeśli włączona blokada własnych haseł, autor nie może wylosować swojego
-                if (blockOwn && isWordCreatedByMe(w)) return false;
-
-                // 3. Ochrona przed hasłem, które inny gracz trzyma w tej sekundzie na czole (po ID lub po tekście)
-                const isCurrentlyOnSomeoneElseForehead = Object.values(roomPlayers).some(
-                    p => p && p.id !== myPlayer.id && p.isPlayingNow &&
-                    (p.currentWordId === w.id || p.currentWordKey === key)
-                );
-                if (isCurrentlyOnSomeoneElseForehead) return false;
-
-                seenInFilter.add(key);
-                return true;
-            });
+            const activeWords = new Set(Object.values(roomPlayers)
+                .filter(member => member.isPlayingNow)
+                .map(member => member.currentWordId));
+            return wordsPool.filter(word => !usedWordIds.has(word.id) && !activeWords.has(word.id)
+                && (!blockOwn || !isWordCreatedBy(word, player)));
         }
 
         window.startPreGameCountdown = function() {
+            if (myPlayer.isPlayingNow) return;
             if (wordsPool.length === 0) {
                 showToast('Worek jest pusty! Niech koledzy dodadzą hasła albo kliknij "+25 losowych haseł".', 'error');
                 switchTab('words');
                 return;
             }
 
-            let available = getAvailableWordsForMe();
+            const available = getAvailableWordsFor(myPlayer);
             if (available.length === 0) {
                 const blockOwn = roomRules.blockOwnWords !== false;
-                const unusedWords = wordsPool.filter(w => !isWordAlreadyUsedAnywhere(w));
-                const nonOwnUnused = unusedWords.filter(w => !blockOwn || !isWordCreatedByMe(w));
+                const unusedWords = wordsPool.filter(w => !usedWordIds.has(w.id));
+                const nonOwnUnused = unusedWords.filter(w => !blockOwn || !isWordCreatedBy(w, myPlayer));
 
                 if (unusedWords.length === 0) {
-                    showToast('Wszystkie hasła z worka zostały już wykorzystane! Dopiszcie nowe albo niech Host kliknie "Przywróć zużyte hasła".', 'warning');
+                    showToast('Brak dostępnych haseł. Dodajcie nowe hasła do lobby.', 'warning');
                     switchTab('words');
                     return;
                 }
@@ -2425,10 +2759,11 @@
             if (preCountdownInterval) clearInterval(preCountdownInterval);
             if (activeGameInterval) clearInterval(activeGameInterval);
             if (nextWordCountdownInterval) clearInterval(nextWordCountdownInterval);
+            cancelPendingWordDraw();
             isWaitingForNextWord = false;
+            currentActiveWord = null;
             myPlayer.isPlayingNow = false;
             myPlayer.currentWordId = null;
-            myPlayer.currentWordKey = null;
             broadcastRoomState();
             document.getElementById('overlay-countdown').classList.add('hidden');
             document.getElementById('overlay-countdown').classList.remove('flex');
@@ -2448,7 +2783,7 @@
             roundHistory = [];
             currentRoundNetPoints = 0;
             isWaitingForNextWord = false;
-            setActionButtonsDisabled(false);
+            setActionButtonsDisabled(true);
             playSound('start');
 
             const gameOverlay = document.getElementById('overlay-active-game');
@@ -2463,23 +2798,97 @@
             pickNextRandomWord();
         }
 
+        function cancelPendingWordDraw() {
+            if (!pendingWordDraw) return;
+            clearTimeout(pendingWordDraw.timeout);
+            pendingWordDraw = null;
+        }
+
+        function resetGameRoomState() {
+            cancelPendingWordDraw();
+            lastDrawReplyByPlayer.clear();
+            currentActiveWord = null;
+            isWaitingForNextWord = false;
+        }
+
+        function reserveRoomWord(player) {
+            const available = getAvailableWordsFor(player);
+            if (!available.length) return null;
+            const word = available[Math.floor(Math.random() * available.length)];
+            usedWordIds.add(word.id);
+            return word;
+        }
+
+        function handleGameRoomEvent(msg) {
+            if (msg.type === 'GAME_DRAW_REQUEST' && roomHostId === myPlayer.id) {
+                const player = roomPlayers[msg.senderId];
+                if (!player?.isPlayingNow || !Number.isSafeInteger(msg.requestId) || msg.requestId < 1) return;
+                const previous = lastDrawReplyByPlayer.get(player.id);
+                if (previous && msg.requestId < previous.requestId) return;
+                let reply = previous;
+                if (msg.requestId !== previous?.requestId) {
+                    for (const id of lastDrawReplyByPlayer.keys()) {
+                        if (!roomPlayers[id]) lastDrawReplyByPlayer.delete(id);
+                    }
+                    reply = { targetId: player.id, requestId: msg.requestId, word: reserveRoomWord(player) };
+                    lastDrawReplyByPlayer.set(player.id, reply);
+                    if (reply.word) {
+                        broadcastRoomState();
+                        updateUI();
+                    }
+                }
+                sendRoomEvent('GAME_DRAW_GRANT', reply);
+            } else if (msg.type === 'GAME_DRAW_GRANT' && msg.senderId === roomHostId) {
+                const word = msg.word;
+                if (word !== null) {
+                    if (typeof word?.text !== 'string' || word.text.length > 240 || word.id !== roomWordId(word.text)) return;
+                    if (!usedWordIds.has(word.id)) {
+                        usedWordIds.add(word.id);
+                        scheduleRoomRender();
+                    }
+                }
+                if (msg.targetId !== myPlayer.id || msg.requestId !== pendingWordDraw?.requestId) return;
+                cancelPendingWordDraw();
+                showReservedWord(word);
+            }
+        }
+
         function pickNextRandomWord() {
-            const available = getAvailableWordsForMe();
-            if (available.length === 0) {
+            if (!myPlayer.isPlayingNow || pendingWordDraw) return;
+            if (!isRoomConnected()) {
+                showToast('Utracono połączenie z pokojem.', 'warning');
+                finishRound();
+                return;
+            }
+            if (roomHostId === myPlayer.id) {
+                showReservedWord(reserveRoomWord(myPlayer));
+                return;
+            }
+
+            isWaitingForNextWord = true;
+            setActionButtonsDisabled(true);
+            document.getElementById('active-word-text').textContent = 'Losowanie…';
+            const requestId = ++nextWordRequestId;
+            const timeout = setTimeout(() => {
+                cancelPendingWordDraw();
+                showToast('Host nie odpowiedział na losowanie. Spróbuj zacząć rundę ponownie.', 'warning');
+                finishRound();
+            }, 6500);
+            pendingWordDraw = { requestId, timeout };
+            sendRoomEvent('GAME_DRAW_REQUEST', { requestId });
+        }
+
+        function showReservedWord(word) {
+            if (!word) {
                 playSound('end');
                 showToast('Koniec dostępnych haseł w worku!', 'info');
                 finishRound();
                 return;
             }
 
-            const randomIndex = Math.floor(Math.random() * available.length);
-            currentActiveWord = available[randomIndex];
-
-            // Natychmiast rezerwujemy hasło globalnie po ID oraz po znormalizowanym tekście (np. "burzyn"),
-            // dzięki czemu żaden gracz nigdy nie dostanie tego samego hasła po raz drugi!
-            markWordAsUsedEverywhere(currentActiveWord);
-            myPlayer.currentWordId = currentActiveWord.id;
-            myPlayer.currentWordKey = normalizeWordKey(currentActiveWord.text);
+            currentActiveWord = word;
+            usedWordIds.add(word.id);
+            myPlayer.currentWordId = word.id;
             broadcastRoomState();
 
             isWaitingForNextWord = false;
@@ -2489,7 +2898,7 @@
             document.getElementById('active-word-category').textContent = currentActiveWord.category || '😎 Osoba / Ekipa';
             document.getElementById('active-word-author').textContent = `Od: ${currentActiveWord.author || 'Ekipa'}`;
             document.getElementById('active-word-author-mobile').textContent = `Wymyślił(a): ${currentActiveWord.author || 'Ekipa'}`;
-            document.getElementById('active-remaining-pool').textContent = `Zostało dla Ciebie w puli: ${Math.max(0, available.length - 1)}`;
+            document.getElementById('active-remaining-pool').textContent = `Zostało dla Ciebie w puli: ${getAvailableWordsFor(myPlayer).length}`;
         }
 
         // PUNKTACJA: +1 za Zgadnięte (correct), -1 za PAS (pass) + 3 sekundy odliczania przed kolejnym hasłem
@@ -2507,7 +2916,7 @@
                 author: currentActiveWord.author,
                 status: actionType
             });
-            markWordAsUsedEverywhere(currentActiveWord);
+            myPlayer.currentWordId = null;
 
             if (actionType === 'correct') {
                 playSound('correct');
@@ -2524,7 +2933,7 @@
             }
 
             roomGuessedFeed.unshift({
-                eventId: 'ev_v11_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+                eventId: 'ev_v12_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
                 wordText: currentActiveWord.text,
                 category: currentActiveWord.category,
                 wordAuthor: currentActiveWord.author || 'Ekipa',
@@ -2544,13 +2953,11 @@
             }, 260);
 
             // Sprawdzamy, czy zostały jeszcze jakieś unikalne hasła dla tego gracza w puli pokoju
-            const remainingAvailable = getAvailableWordsForMe();
+            const remainingAvailable = getAvailableWordsFor(myPlayer);
             if (remainingAvailable.length === 0) {
-                setTimeout(() => {
-                    playSound('end');
-                    showToast('Wszystkie unikalne hasła z worka zostały zużyte!', 'info');
-                    finishRound();
-                }, 500);
+                playSound('end');
+                showToast('Koniec dostępnych haseł w worku!', 'info');
+                finishRound();
                 return;
             }
 
@@ -2577,11 +2984,11 @@
         window.finishRound = function() {
             if (activeGameInterval) clearInterval(activeGameInterval);
             if (nextWordCountdownInterval) clearInterval(nextWordCountdownInterval);
+            cancelPendingWordDraw();
             isWaitingForNextWord = false;
             setActionButtonsDisabled(false);
             myPlayer.isPlayingNow = false;
             myPlayer.currentWordId = null;
-            myPlayer.currentWordKey = null;
             currentActiveWord = null;
 
             document.getElementById('overlay-active-game').classList.add('hidden');
@@ -2634,10 +3041,9 @@
 
         // --- RENDEROWANIE LISTY GRACZY, WORKA HASEŁ ORAZ PODSTRONY RANKINGÓW ---
         function updateUI() {
-            deduplicateWordsPool();
             const total = wordsPool.length;
-            const availableForMe = getAvailableWordsForMe().length;
-            const used = wordsPool.filter(w => isWordAlreadyUsedAnywhere(w)).length;
+            const availableForMe = getAvailableWordsFor(myPlayer).length;
+            const used = usedWordIds.size;
             const guessedEvents = roomGuessedFeed.filter(e => e.status === 'correct');
 
             document.getElementById('nav-word-count').textContent = total;
@@ -2650,15 +3056,11 @@
 
             // Synchronizacja przełączników zasad Hosta
             const amHost = isRoomHost();
+            document.getElementById('delete-room-trigger-btn').disabled = !amHost;
             const blockOwnEl = document.getElementById('block-own-words-toggle');
-            const avoidRepeatsEl = document.getElementById('avoid-repeats-toggle');
             if (blockOwnEl) {
                 blockOwnEl.checked = roomRules.blockOwnWords !== false;
                 blockOwnEl.disabled = !amHost;
-            }
-            if (avoidRepeatsEl) {
-                avoidRepeatsEl.checked = roomRules.avoidRepeats !== false;
-                avoidRepeatsEl.disabled = !amHost;
             }
 
             const hostNick = (roomPlayers[roomHostId] && roomPlayers[roomHostId].nick) ? roomPlayers[roomHostId].nick : (amHost ? myPlayer.nick : 'Host');
@@ -2669,28 +3071,19 @@
                     : `👑 Zasady pokoju ustala Host (<b>${escapeHtml(hostNick)}</b>) – każdy może dodawać hasła!`;
             }
 
-            const claimBtn = document.getElementById('claim-host-btn');
-            if (claimBtn) {
-                claimBtn.classList.toggle('hidden', amHost);
-            }
-
             // Renderowanie Ekipy w Lobby + Licznik LIVE
             const playersArr = Object.values(roomPlayers).sort((a, b) => (b.score || 0) - (a.score || 0));
-            const onlineCount = Math.max(1, playersArr.length);
+            const onlineCount = playersArr.length;
             document.getElementById('players-online-count').textContent = `${onlineCount} online`;
             document.getElementById('header-live-count').textContent = onlineCount;
             const globalCounter = document.getElementById('global-live-counter');
             if (globalCounter) globalCounter.textContent = onlineCount;
 
             const rosterGrid = document.getElementById('players-roster-grid');
-            rosterGrid.innerHTML = '';
+            const someoneElsePlaying = playersArr.find(player => player.isPlayingNow && player.id !== myPlayer.id);
+            if (currentTab === 'play') rosterGrid.innerHTML = '';
 
-            let someoneElsePlaying = null;
-
-            playersArr.forEach((p, idx) => {
-                if (p.isPlayingNow && p.id !== myPlayer.id) {
-                    someoneElsePlaying = p;
-                }
+            if (currentTab === 'play') playersArr.forEach((p, idx) => {
                 const isMe = p.id === myPlayer.id;
                 const isThisHost = p.id === roomHostId;
                 const scoreVal = p.score || 0;
@@ -2736,7 +3129,7 @@
 
             // Renderowanie Podstrony 3: RANKING GRACZY (Kto ma najwięcej punktów wygrywa!)
             const leaderboardEl = document.getElementById('leaderboard-players-list');
-            if (leaderboardEl) {
+            if (currentTab === 'ranking' && leaderboardEl) {
                 leaderboardEl.innerHTML = '';
                 playersArr.forEach((p, idx) => {
                     const scoreVal = p.score || 0;
@@ -2773,7 +3166,7 @@
 
             // Renderowanie Podstrony 4: PANEL ADMINISTRATORA / EDYCJA PUNKTÓW GRACZY
             const adminListEl = document.getElementById('admin-players-list');
-            if (adminListEl) {
+            if (currentTab === 'admin' && adminListEl) {
                 adminListEl.innerHTML = '';
                 playersArr.forEach(p => {
                     const scoreVal = p.score || 0;
@@ -2817,7 +3210,7 @@
 
             // Renderowanie Podstrony 3: HISTORIA ODGADNIĘTYCH HASEŁ
             const feedEl = document.getElementById('guessed-words-feed');
-            if (feedEl) {
+            if (currentTab === 'ranking' && feedEl) {
                 feedEl.innerHTML = '';
                 if (roomGuessedFeed.length === 0) {
                     feedEl.innerHTML = `
@@ -2856,6 +3249,7 @@
             }
 
             // Renderowanie Worka Haseł
+            if (currentTab !== 'words') return;
             const container = document.getElementById('words-list-container');
             container.innerHTML = '';
 
@@ -2871,8 +3265,8 @@
             }
 
             wordsPool.forEach((item, index) => {
-                const isUsed = isWordAlreadyUsedAnywhere(item);
-                const isMine = isWordCreatedByMe(item);
+                const isUsed = usedWordIds.has(item.id);
+                const isMine = isWordCreatedBy(item, myPlayer);
                 const row = document.createElement('div');
                 row.className = `flex items-center justify-between p-3 rounded-2xl border transition ${
                     isUsed ? 'bg-slate-950/40 border-slate-800/50 opacity-55' : 'bg-slate-950 border-slate-800'
@@ -2909,7 +3303,6 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             initLobbyScreen();
-            initCloudEngine();
             updateUI();
         });
     </script>
