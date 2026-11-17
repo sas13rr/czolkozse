@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#100d24">
-    <title>CZÓŁKO.IO v13 - Imprezowa Gra Ekipy</title>
+    <title>CZÓŁKO.IO v14 - Imprezowa Gra Ekipy</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -237,7 +237,7 @@
                         <i class="fa-solid fa-mobile-screen-button text-xl text-white -rotate-90"></i>
                     </span>
                     <h1 class="font-display font-bold text-4xl sm:text-5xl tracking-wide text-white">CZÓŁKO<span class="text-pink-300">.IO</span></h1>
-                    <span class="text-[11px] font-extrabold bg-indigo-300 text-indigo-950 px-2 py-0.5 rounded-full">v13</span>
+                    <span class="text-[11px] font-extrabold bg-indigo-300 text-indigo-950 px-2 py-0.5 rounded-full">v14</span>
                 </div>
                 <p class="mt-1.5 text-xs text-indigo-100/80 font-medium">Imprezowa gra na telefon dla całej ekipy</p>
             </div>
@@ -270,7 +270,7 @@
                         </div>
                     </div>
                     <div id="avatar-picker" class="gap-1.5 mt-3" role="group" aria-label="Wybierz awatar emoji"></div>
-                    <p id="avatar-upload-hint" class="mt-2 text-[11px] text-slate-400">Animowany GIF do 96 KB i 512 × 512 px.</p>
+                    <p id="avatar-upload-hint" class="mt-2 text-[11px] text-slate-400">Animowany GIF do 4 MB i 2048 × 2048 px.</p>
                 </fieldset>
 
                 <button type="button" onclick="proceedToRoomStep()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-display font-bold text-lg shadow-lg shadow-indigo-600/30 active:scale-[0.98] transition flex items-center justify-center gap-2">
@@ -1097,6 +1097,7 @@
         let pendingWordDraw = null;
         let nextWordRequestId = 0;
         const lastDrawReplyByPlayer = new Map();
+        const lastDrawKeyByPlayer = new Map(); // host: klucz ostatniego hasła każdego gracza (brak powtórki z rzędu)
         let showSpoilers = false;
         let gameDurationSeconds = 0; // Zawsze 0 = Bez limitu czasu
         let preCountdownInterval = null;
@@ -1236,9 +1237,14 @@
         }
 
         // --- AWATAR Z PLIKU ---
-        const MAX_GIF_AVATAR_BYTES = 96 * 1024;
-        const MAX_GIF_AVATAR_DIMENSION = 512;
+        const MAX_GIF_AVATAR_BYTES = 4 * 1024 * 1024;
+        const MAX_GIF_AVATAR_DIMENSION = 2048;
         const MAX_AVATAR_URL_LENGTH = 'data:image/jpeg;base64,'.length + Math.ceil(MAX_GIF_AVATAR_BYTES / 3) * 4;
+        // Duże awatary nie mieszczą się w jednej wiadomości brokera (limit ok. 1 MB), więc wysyłamy je w kawałkach.
+        const AVATAR_INLINE_MAX = 300000;      // znaków data-URL, które jeszcze lecą razem z profilem
+        const AVATAR_CHUNK_SIZE = 120000;      // znaków na jedną paczkę
+        const AVATAR_CHUNK_DELAY_MS = 60;
+        const AVATAR_MAX_CHUNKS = Math.ceil(MAX_AVATAR_URL_LENGTH / AVATAR_CHUNK_SIZE);
         let pendingAvatarUpload = null;
 
         window.handleCustomAvatarUpload = async function(event) {
@@ -1253,7 +1259,7 @@
 
             try {
                 if (isGif && file.size > MAX_GIF_AVATAR_BYTES) {
-                    showToast('Wybierz GIF o rozmiarze do 96 KB.', 'warning');
+                    showToast(`Ten GIF ma ${(file.size / 1048576).toFixed(1)} MB – limit to ${MAX_GIF_AVATAR_BYTES / 1048576} MB. Wybierz lżejszy GIF.`, 'warning');
                     return;
                 }
                 if (file.size > 10 * 1024 * 1024) {
@@ -1285,7 +1291,7 @@
 
                 if (isGif) {
                     if (Math.max(img.naturalWidth, img.naturalHeight) > MAX_GIF_AVATAR_DIMENSION) {
-                        showToast('Wybierz GIF o wymiarach do 512 × 512 px.', 'warning');
+                        showToast(`Ten GIF ma ${img.naturalWidth} × ${img.naturalHeight} px – limit to ${MAX_GIF_AVATAR_DIMENSION} × ${MAX_GIF_AVATAR_DIMENSION} px.`, 'warning');
                         return;
                     }
                 } else {
@@ -1313,9 +1319,41 @@
             }
         };
 
+        // Wynik walidacji dużych awatarów jest zapamiętywany – ten sam 4 MB napis nie jest sprawdzany przy każdym odświeżeniu listy.
+        const validatedAvatars = new Set();
         function safeAvatarSrc(src) {
             if (typeof src !== 'string' || src.length > MAX_AVATAR_URL_LENGTH) return '';
-            return /^data:image\/(?:jpeg|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(src) ? src : '';
+            if (validatedAvatars.has(src)) return src;
+            if (!/^data:image\/(?:jpeg|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(src)) return '';
+            if (src.length > 50000) {
+                if (validatedAvatars.size >= 24) validatedAvatars.clear();
+                validatedAvatars.add(src);
+            }
+            return src;
+        }
+
+        // Duży GIF wstawiany jako data-URL do innerHTML byłby parsowany od nowa przy każdym odświeżeniu.
+        // Zamieniamy go raz na lekki adres blob: i trzymamy w pamięci podręcznej.
+        const avatarBlobUrls = new Map();
+        function avatarDisplaySrc(src) {
+            if (!src || src.length <= 100000 || typeof URL?.createObjectURL !== 'function') return src;
+            let url = avatarBlobUrls.get(src);
+            if (url) return url;
+            try {
+                const binary = atob(src.slice(src.indexOf(',') + 1));
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                url = URL.createObjectURL(new Blob([bytes], { type: src.startsWith('data:image/gif') ? 'image/gif' : 'image/jpeg' }));
+            } catch (error) {
+                return src;
+            }
+            avatarBlobUrls.set(src, url);
+            if (avatarBlobUrls.size > 24) {
+                const [oldSrc, oldUrl] = avatarBlobUrls.entries().next().value;
+                avatarBlobUrls.delete(oldSrc);
+                URL.revokeObjectURL(oldUrl);
+            }
+            return url;
         }
 
         function renderAuthAvatarPreview() {
@@ -1324,7 +1362,7 @@
                 const box = document.getElementById(id);
                 if (!box) continue;
                 if (avatarSrc) {
-                    box.innerHTML = `<img src="${avatarSrc}" alt="Awatar" class="w-full h-full object-cover">`;
+                    box.innerHTML = `<img src="${avatarDisplaySrc(avatarSrc)}" alt="Awatar" class="w-full h-full object-cover">`;
                 } else {
                     box.textContent = myPlayer.avatar || '😎';
                 }
@@ -1336,7 +1374,7 @@
             if (!box) return;
             const avatarSrc = safeAvatarSrc(myPlayer.avatarImg);
             if (avatarSrc) {
-                box.innerHTML = `<img src="${avatarSrc}" alt="Awatar" class="w-full h-full object-cover">`;
+                box.innerHTML = `<img src="${avatarDisplaySrc(avatarSrc)}" alt="Awatar" class="w-full h-full object-cover">`;
             } else {
                 box.innerHTML = `<span class="text-base sm:text-lg">${escapeHtml(myPlayer.avatar || '😎')}</span>`;
             }
@@ -1345,7 +1383,7 @@
         function renderPlayerAvatarBadge(player, sizeClass = 'w-9 h-9 text-xl') {
             const avatarSrc = safeAvatarSrc(player.avatarImg);
             if (avatarSrc) {
-                return `<div class="${sizeClass} rounded-xl overflow-hidden shrink-0 border border-white/20 shadow-sm"><img src="${avatarSrc}" loading="lazy" decoding="async" class="w-full h-full object-cover" alt=""></div>`;
+                return `<div class="${sizeClass} rounded-xl overflow-hidden shrink-0 border border-white/20 shadow-sm"><img src="${avatarDisplaySrc(avatarSrc)}" loading="lazy" decoding="async" class="w-full h-full object-cover" alt=""></div>`;
             }
             return `<div class="${sizeClass} rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">${escapeHtml(player.avatar || '😎')}</div>`;
         }
@@ -1528,7 +1566,9 @@
         const ROOM_CLOSE_TTL_SECONDS = 15 * 60;
         const ROOM_CLOSE_TIMEOUT_MS = 4000;
         const formerRoomHosts = new Set();
-        const ROOM_WORD_ID = /^[a-zA-Z0-9_-]{1,1600}$/;
+        const ROOM_WORD_ID = /^[a-zA-Z0-9_-]{1,2000}$/;
+        const incomingAvatars = new Map();
+        const completedAvatars = new Map();
         const ROOM_PLAYER_ID = /^p_[a-f0-9]{32}$/;
         const ROOM_GENERATION_ID = /^r_[a-f0-9]{32}$/;
         const roomWordChanges = new Map();
@@ -1586,6 +1626,8 @@
             roomGuessedFeed = [];
             roomWordChanges.clear();
             roomStateVersions.clear();
+            incomingAvatars.clear();
+            completedAvatars.clear();
             departedPlayers.clear();
             roomScoreOverrides = {};
             roomStateVersion = 0;
@@ -1809,7 +1851,7 @@
             setSyncBadge(true);
             switchTab('play');
             showToast(`Dołączono do pokoju #${currentRoomCode}.`, 'success');
-            if (welcome) sendRoomEvent('PLAYER_PROFILE', { player: publicRoomPlayer(myPlayer, true) });
+            if (welcome) sendOwnProfile();
             pulseRoom();
             roomPulseTimer = setInterval(pulseRoom, ROOM_PULSE_MS);
         }
@@ -1827,6 +1869,81 @@
             };
             if (includeAvatar) fields.avatarImg = player.avatarImg || null;
             return fields;
+        }
+
+        function isBigAvatar(src) {
+            return typeof src === 'string' && src.length > AVATAR_INLINE_MAX;
+        }
+
+        // Krótki identyfikator zawartości awatara – ten sam awatar zawsze ma to samo ID,
+        // więc kilka nakładających się wysyłek składa się w jedną całość.
+        let avatarIdCache = { src: null, id: '' };
+        function avatarContentId(src) {
+            if (avatarIdCache.src === src) return avatarIdCache.id;
+            let h1 = 0x811c9dc5, h2 = 0x01000193;
+            for (let i = 0; i < src.length; i++) {
+                const c = src.charCodeAt(i);
+                h1 = Math.imul(h1 ^ c, 16777619) >>> 0;
+                h2 = Math.imul(h2 + c, 2246822519) >>> 0;
+            }
+            const id = 'a' + h1.toString(36) + h2.toString(36) + src.length.toString(36);
+            avatarIdCache = { src, id };
+            return id;
+        }
+
+        function sendAvatarChunks(targetId = '') {
+            const src = myPlayer.avatarImg;
+            if (!isBigAvatar(src)) return;
+            const connection = roomConnection;
+            const generation = roomGeneration;
+            const avatarId = avatarContentId(src);
+            const total = Math.ceil(src.length / AVATAR_CHUNK_SIZE);
+            let index = 0;
+            const sendNext = () => {
+                if (roomConnection !== connection || roomGeneration !== generation || !isRoomConnected()) return;
+                const fields = { avatarId, index, total, data: src.slice(index * AVATAR_CHUNK_SIZE, (index + 1) * AVATAR_CHUNK_SIZE) };
+                if (targetId) fields.targetId = targetId;
+                publishRoomPacket('PLAYER_AVATAR_CHUNK', fields);
+                index++;
+                if (index < total) setTimeout(sendNext, AVATAR_CHUNK_DELAY_MS);
+            };
+            sendNext();
+        }
+
+        // Wysyła mój profil. Mały awatar leci razem z profilem, duży (GIF) – w osobnych paczkach zaraz po nim.
+        function sendOwnProfile(targetId = '') {
+            const big = isBigAvatar(myPlayer.avatarImg);
+            const fields = { player: publicRoomPlayer(myPlayer, !big) };
+            if (targetId) fields.targetId = targetId;
+            const sent = sendRoomEvent('PLAYER_PROFILE', fields);
+            if (sent && big) sendAvatarChunks(targetId);
+            return sent;
+        }
+
+        function receiveAvatarChunk(senderId, message) {
+            const player = roomPlayers[senderId];
+            const { avatarId, index, total, data } = message;
+            if (!player || typeof avatarId !== 'string' || !/^[a-z0-9]{1,60}$/.test(avatarId)) return;
+            if (!Number.isSafeInteger(index) || !Number.isSafeInteger(total)) return;
+            if (total < 1 || total > AVATAR_MAX_CHUNKS || index < 0 || index >= total) return;
+            if (typeof data !== 'string' || !data.length || data.length > AVATAR_CHUNK_SIZE) return;
+            if (completedAvatars.get(senderId) === avatarId) return;
+            let entry = incomingAvatars.get(senderId);
+            if (!entry || entry.avatarId !== avatarId || entry.total !== total) {
+                entry = { avatarId, total, parts: new Array(total), received: 0 };
+                incomingAvatars.set(senderId, entry);
+            }
+            if (entry.parts[index] === undefined) {
+                entry.parts[index] = data;
+                entry.received++;
+            }
+            if (entry.received < total) return;
+            incomingAvatars.delete(senderId);
+            const src = safeAvatarSrc(entry.parts.join(''));
+            if (!src) return;
+            completedAvatars.set(senderId, avatarId);
+            player.avatarImg = src;
+            scheduleRoomRender();
         }
 
         function roomPlayerStats(source) {
@@ -1848,7 +1965,7 @@
                 avatar: AVATARS.includes(source.avatar) ? source.avatar : AVATARS[0],
                 avatarImg: avatarImg === undefined ? existing?.avatarImg || null
                     : typeof safeAvatarSrc === 'function' ? safeAvatarSrc(avatarImg) || null
-                    : typeof avatarImg === 'string' && avatarImg.length <= 140000 && /^data:image\/(?:jpeg|png|webp|gif);base64,[a-z0-9+/]+=*$/i.test(avatarImg) ? avatarImg : null,
+                    : typeof avatarImg === 'string' && avatarImg.length <= 720000 && /^data:image\/(?:jpeg|png|webp|gif);base64,[a-z0-9+/]+=*$/i.test(avatarImg) ? avatarImg : null,
                 ...roomPlayerStats(source),
                 isPlayingNow: source.isPlayingNow === true,
                 currentWordId: typeof source.currentWordId === 'string' && ROOM_WORD_ID.test(source.currentWordId) ? source.currentWordId : null,
@@ -1915,6 +2032,8 @@
         }
 
         function removeRoomMember(id) {
+            incomingAvatars.delete(id);
+            completedAvatars.delete(id);
             if (!roomPlayers[id]) return;
             departedPlayers.add(id);
             delete roomPlayers[id];
@@ -2081,7 +2200,7 @@
                     targetId: senderId, player: publicRoomPlayer(roomPlayers[senderId]), roster: roomRoster(),
                     departed: [...departedPlayers], state: buildRoomState()
                 });
-                sendRoomEvent('PLAYER_PROFILE', { targetId: senderId, player: publicRoomPlayer(myPlayer, true) });
+                sendOwnProfile(senderId);
                 scheduleRoomRender();
                 return;
             }
@@ -2110,13 +2229,15 @@
                 } else removeRoomMember(targetId);
             } else if (type === 'ROOM_ADMIT' && senderId === roomHostId && !roomPlayers[targetId]) {
                 if (putRoomPlayer(targetId, message.player)) {
-                    sendRoomEvent('PLAYER_PROFILE', { targetId, player: publicRoomPlayer(myPlayer, true) });
+                    sendOwnProfile(targetId);
                     scheduleRoomRender();
                 }
             } else if (type === 'PLAYER_PROFILE' && (!targetId || targetId === myPlayer.id)) {
                 if (putRoomPlayer(senderId, { ...message.player, ...roomPlayerStats(roomPlayers[senderId]) })) scheduleRoomRender();
+            } else if (type === 'PLAYER_AVATAR_CHUNK' && (!targetId || targetId === myPlayer.id)) {
+                receiveAvatarChunk(senderId, message);
             } else if (type === 'ROOM_RESYNC') {
-                sendRoomEvent('PLAYER_PROFILE', { targetId: senderId, player: publicRoomPlayer(myPlayer, true) });
+                sendOwnProfile(senderId);
                 if (roomHostId === myPlayer.id) sendRoomRoster(senderId);
             } else if (type === 'ROOM_ROSTER' && (!targetId || targetId === myPlayer.id)) {
                 const handedOff = !formerRoomHosts.has(senderId) && (
@@ -2368,6 +2489,20 @@
             });
         };
 
+        // Klucz do wykrywania TEGO SAMEGO hasła: ignoruje tylko wielkość liter, polskie znaki, spacje i interpunkcję
+        // ("Sigma Boy" == "sigma  boy!" == "SIGMA-BOY"). Hasła PODOBNE, ale różne ("Sigma Boy" i "Sigma Boy (mem)",
+        // "Kebab" i "Kebab z kurczaka") mają różne klucze i mogą być w worku razem.
+        // Litery z innych alfabetów i emoji też się liczą – hasło złożone z samych emoji nie zlewa się z innymi.
+        function wordDupKey(text) {
+            const base = String(text || '')
+                .normalize('NFKC')
+                .toLowerCase()
+                .replace(/ł/g, 'l')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const key = base.replace(/[^\p{L}\p{N}\p{Extended_Pictographic}]+/gu, '');
+            return key || base.replace(/\s+/g, ' ').trim();
+        }
+
         function roomWordId(text) {
             const normalized = text.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
             return 'w_' + Array.from(normalized, char => char.codePointAt(0).toString(16)).join('-');
@@ -2380,8 +2515,9 @@
             if (!text) return;
 
             const id = roomWordId(text);
-            if (wordsPool.some(w => w.id === id)) {
-                showToast('To hasło już jest w worku ekipy!', 'warning');
+            const dupKey = wordDupKey(text);
+            if (wordsPool.some(w => w.id === id || wordDupKey(w.text) === dupKey)) {
+                showToast('Dokładnie takie hasło już jest w worku! Podobne możesz dodać, identyczne nie.', 'warning');
                 input.value = '';
                 return;
             }
@@ -2461,7 +2597,9 @@
 
         window.loadTikTokPack = function() {
             const existingIds = new Set(wordsPool.map(word => word.id));
-            const fresh = TIKTOK_WORD_PACK.filter(item => !existingIds.has(roomWordId(item.text)));
+            const existingKeys = new Set(wordsPool.map(word => wordDupKey(word.text)));
+            const fresh = TIKTOK_WORD_PACK.filter(item => !existingIds.has(roomWordId(item.text))
+                && !existingKeys.has(wordDupKey(item.text)));
             if (!fresh.length) {
                 showToast('Wszystkie gotowe hasła z paczki już są w worku! Dopiszcie własne.', 'warning');
                 return;
@@ -2493,12 +2631,18 @@
             if (!wordsPool.some(word => word.id === id)) return;
             rememberRemovedRoomWord(id);
             wordsPool = wordsPool.filter(w => w.id !== id);
+            usedWordIds.delete(id);
+            recentWordIds = recentWordIds.filter(recentId => recentId !== id);
             updateUI();
             broadcastRoomState();
         };
 
         window.clearAllWords = function() {
             wordsPool = [];
+            // Po wyczyszczeniu worka nowe hasła zaczynają "od zera" – nie dziedziczą statusu "odegrane" po starych.
+            usedWordIds.clear();
+            usedEpoch++;
+            recentWordIds = [];
             window._lastClearedAt = Date.now();
             updateUI();
             broadcastRoomState({ clearedAt: window._lastClearedAt });
@@ -2563,13 +2707,16 @@
 
             let imported = 0;
             const existingIds = new Set(wordsPool.map(word => word.id));
+            const existingKeys = new Set(wordsPool.map(word => wordDupKey(word.text)));
             for (const item of entries) {
                 if (typeof item?.t !== 'string') continue;
                 const text = item.t.trim();
                 if (!text || text.length > 240) continue;
                 const id = roomWordId(text);
-                if (existingIds.has(id)) continue;
+                const dupKey = wordDupKey(text);
+                if (existingIds.has(id) || existingKeys.has(dupKey)) continue;
                 existingIds.add(id);
+                existingKeys.add(dupKey);
                 restoreRemovedRoomWord(id);
                 wordsPool.push({
                     id,
@@ -2742,13 +2889,47 @@
                 || Boolean(word.authorNick && word.authorNick === player.nick?.toLowerCase());
         }
 
-        function getAvailableWordsFor(player) {
+        // Kontekst losowania dla jednego gracza: które hasła są wolne, zajęte (na czyimś czole) i dozwolone dla niego.
+        // "Takie samo" hasło = ten sam klucz (patrz wordDupKey), więc identyczne hasła nigdy nie wypadną dwa razy w jednym worku.
+        function buildDrawContext(player) {
             const blockOwn = roomRules.blockOwnWords !== false;
-            const activeWords = new Set(Object.values(roomPlayers)
-                .filter(member => member.isPlayingNow)
-                .map(member => member.currentWordId));
-            return wordsPool.filter(word => !usedWordIds.has(word.id) && !activeWords.has(word.id)
-                && (!blockOwn || !isWordCreatedBy(word, player)));
+            const onForeheads = new Set();
+            for (const member of Object.values(roomPlayers)) {
+                if (member.isPlayingNow && member.id !== player.id && member.currentWordId) onForeheads.add(member.currentWordId);
+            }
+            const keys = new Map();
+            for (const word of wordsPool) keys.set(word.id, wordDupKey(word.text));
+            const takenKeys = new Set();
+            const foreheadKeys = new Set();
+            for (const word of wordsPool) {
+                if (onForeheads.has(word.id)) {
+                    foreheadKeys.add(keys.get(word.id));
+                    takenKeys.add(keys.get(word.id));
+                } else if (usedWordIds.has(word.id)) {
+                    takenKeys.add(keys.get(word.id));
+                }
+            }
+            return {
+                blockOwn, onForeheads, keys, foreheadKeys,
+                mayHave: word => !blockOwn || !isWordCreatedBy(word, player),
+                isFree: word => !usedWordIds.has(word.id) && !onForeheads.has(word.id) && !takenKeys.has(keys.get(word.id)),
+                isBusy: word => onForeheads.has(word.id) || foreheadKeys.has(keys.get(word.id))
+            };
+        }
+
+        function uniqueByKey(words, keys) {
+            const seen = new Set();
+            return words.filter(word => {
+                const key = keys.get(word.id);
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        function getAvailableWordsFor(player) {
+            const ctx = buildDrawContext(player);
+            return uniqueByKey(wordsPool.filter(word => ctx.isFree(word) && ctx.mayHave(word)), ctx.keys);
         }
 
         window.startPreGameCountdown = function() {
@@ -2848,6 +3029,7 @@
         function resetGameRoomState() {
             cancelPendingWordDraw();
             lastDrawReplyByPlayer.clear();
+            lastDrawKeyByPlayer.clear();
             currentActiveWord = null;
             isWaitingForNextWord = false;
         }
@@ -2881,38 +3063,47 @@
         };
 
         // Host jest jedynym źródłem prawdy. Zwraca { word, reason, cycled }.
-        // Kolejność: 1) świeże hasło  2) gdy dla tego gracza zostały tylko własne – powtórka cudzego hasła
-        // 3) gdy w worku nie ma już żadnych świeżych – automatyczne przetasowanie. Runda NIE kończy się, dopóki da się coś wylosować.
+        // Zasady:
+        //  1) hasło wypada dopiero wtedy, gdy nie było jeszcze losowane w tym worku (i nikt go nie ma na czole),
+        //  2) gdy w worku nie ma już ŻADNEGO wolnego hasła – worek tasuje się sam i każde hasło znów jest do wzięcia,
+        //  3) gdy dla tego gracza zostały tylko jego własne hasła – dostaje komunikat (nie dajemy powtórek cudzych),
+        //  4) ten sam gracz nigdy nie dostaje dwa razy z rzędu tego samego hasła, a po przetasowaniu nie wraca to, co wypadło tuż przed.
         function drawRoomWord(player) {
             if (!wordsPool.length) return { word: null, reason: 'empty', cycled: false };
-            const blockOwn = roomRules.blockOwnWords !== false;
-            const onForeheads = new Set(Object.values(roomPlayers)
-                .filter(member => member.isPlayingNow && member.id !== player.id && member.currentWordId)
-                .map(member => member.currentWordId));
-            const allowed = wordsPool.filter(word => !onForeheads.has(word.id)
-                && (!blockOwn || !isWordCreatedBy(word, player)));
-            if (!allowed.length) {
-                const onlyOwn = blockOwn && wordsPool.every(word => isWordCreatedBy(word, player));
-                return { word: null, reason: onlyOwn ? 'only-own' : 'empty', cycled: false };
-            }
+            let ctx = buildDrawContext(player);
+            const lastKey = lastDrawKeyByPlayer.get(player.id);
+            const recentKeys = () => new Set(recentWordIds.map(id => ctx.keys.get(id)).filter(key => key !== undefined));
 
-            let fresh = allowed.filter(word => !usedWordIds.has(word.id));
+            let fresh = wordsPool.filter(word => ctx.isFree(word) && ctx.mayHave(word));
             let cycled = false;
-            if (!fresh.length) {
-                const freshForOthers = wordsPool.some(word => !usedWordIds.has(word.id) && !onForeheads.has(word.id));
-                if (!freshForOthers) {
+            if (!fresh.length && !wordsPool.some(ctx.isFree)) {
+                // Worek się skończył. Tasujemy tylko wtedy, gdy po tasowaniu da się wylosować coś INNEGO niż ostatnio
+                // (przy jednym jedynym haśle nie ma sensu pokazywać go w kółko).
+                const eligible = uniqueByKey(wordsPool.filter(word => ctx.mayHave(word) && !ctx.isBusy(word)), ctx.keys);
+                const recent = recentKeys();
+                if (eligible.some(word => ctx.keys.get(word.id) !== lastKey && !recent.has(ctx.keys.get(word.id)))) {
                     startNewShuffleCycle();
                     cycled = true;
-                    fresh = allowed.filter(word => !usedWordIds.has(word.id));
+                    ctx = buildDrawContext(player);
+                    fresh = wordsPool.filter(word => ctx.isFree(word) && ctx.mayHave(word));
+                } else if (eligible.length) {
+                    return { word: null, reason: 'exhausted', cycled: false };
                 }
             }
 
-            let candidates = fresh.length ? fresh : allowed;
-            const notRecent = candidates.filter(word => !recentWordIds.includes(word.id));
-            if (notRecent.length) candidates = notRecent;
+            if (!fresh.length) {
+                const onlyOwn = ctx.blockOwn && wordsPool.every(word => !ctx.mayHave(word));
+                return { word: null, reason: onlyOwn ? 'only-own' : 'no-fresh', cycled };
+            }
 
+            const recent = recentKeys();
+            const notSameAsLast = fresh.filter(word => ctx.keys.get(word.id) !== lastKey);
+            if (!notSameAsLast.length) return { word: null, reason: 'exhausted', cycled };
+            const notRecent = notSameAsLast.filter(word => !recent.has(ctx.keys.get(word.id)));
+            const candidates = notRecent.length ? notRecent : notSameAsLast;
             const word = candidates[randomIndex(candidates.length)];
             usedWordIds.add(word.id);
+            lastDrawKeyByPlayer.set(player.id, ctx.keys.get(word.id));
             recentWordIds.push(word.id);
             const recentLimit = Math.max(1, Math.min(8, Math.floor(wordsPool.length / 2)));
             while (recentWordIds.length > recentLimit) recentWordIds.shift();
@@ -2988,8 +3179,10 @@
         function showReservedWord(word, reason) {
             if (!word) {
                 playSound('end');
-                if (reason === 'only-own') {
-                    showToast('W worku zostały tylko hasła dodane przez Ciebie. Niech ktoś dopisze swoje albo host wyłączy blokadę własnych haseł.', 'warning');
+                if (reason === 'only-own' || reason === 'no-fresh') {
+                    showToast('Dla Ciebie nie ma już nowych haseł (zostały tylko Twoje własne). Niech zagra ktoś inny – worek potem przetasuje się sam.', 'warning');
+                } else if (reason === 'exhausted') {
+                    showToast('To już wszystkie hasła, które możesz dostać – dodajcie nowe, żeby nic się nie powtarzało.', 'warning');
                 } else {
                     showToast('Worek jest pusty – dodajcie hasła (np. \"+25 losowych haseł\").', 'warning');
                 }
