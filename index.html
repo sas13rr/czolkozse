@@ -3,28 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0d0a20">
+<meta name="theme-color" content="#0e0a22">
 <title>CZÓŁKO 1.0 — Imprezowa Gra Ekipy</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* ==========================================================================
-   CZÓŁKO 1.0 — DESIGN SYSTEM (Custom CSS, Zero FOUC, Mobile + Desktop)
+   CZÓŁKO 1.0 — CUSTOM CSS (Zero Tailwind, Mobile + Desktop, Safe Area)
    ========================================================================== */
 :root {
-  --bg: #0c091d;
-  --bg2: #140f30;
-  --card: #1a143c;
-  --card2: #241c52;
-  --line: #393072;
-  --line-hi: #5d50b0;
+  --bg: #0e0a22;
+  --bg2: #151033;
+  --card: #1c1640;
+  --card2: #251e52;
+  --line: #3a3175;
+  --line-hi: #5e51b3;
   --ink: #f7f4ff;
   --mute: #b4ace3;
   --dim: #7b72b2;
   --pink: #ff4fa3;
   --vio: #8b5cf6;
-  --cyan: #22d3ee;
+  --cyan: #38bdf8;
   --blue: #4f8bff;
   --lime: #2ee59d;
   --amber: #ffc23d;
@@ -56,7 +56,7 @@ body::before {
   background:
     radial-gradient(circle at 12% 10%, #6d35e84d, transparent 42%),
     radial-gradient(circle at 88% 86%, #ff4fa33b, transparent 45%),
-    radial-gradient(circle at 52% 45%, #22d3ee14, transparent 42%),
+    radial-gradient(circle at 52% 45%, #38bdf814, transparent 42%),
     radial-gradient(#ffffff11 1px, transparent 1.6px) 0 0 / 22px 22px;
 }
 
@@ -68,7 +68,7 @@ button { cursor: pointer; }
 .dim { color: var(--dim); }
 :focus-visible { outline: 2px solid #c4b5fd; outline-offset: 2px; }
 
-/* ---------- PRZYCISKI 3D ---------- */
+/* ---------- PRZYCISKI ---------- */
 .btn {
   font-family: 'Fredoka', sans-serif;
   font-weight: 700;
@@ -95,7 +95,7 @@ button { cursor: pointer; }
 .btn-go { background: linear-gradient(135deg, #16c487, #3df0a8); color: #03281a; --sd: #0a6544; }
 .btn-no { background: linear-gradient(135deg, #ff4d6a, #ff7a59); --sd: #861b33; }
 .btn-amber { background: linear-gradient(135deg, #ffad1f, #ffd45e); color: #3a2300; --sd: #875800; }
-.btn-cyan { background: linear-gradient(135deg, #06b6d4, #3b82f6); color: #fff; --sd: #114b7a; }
+.btn-cyan { background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: #fff; --sd: #114b7a; }
 .btn-ghost { background: var(--card2); border: 1px solid var(--line); --sd: var(--shadow); color: var(--ink); }
 .btn-dark { background: #0d0a20; border: 1px solid var(--line); --sd: #000; color: var(--ink); }
 .btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 12px; box-shadow: 0 3px 0 var(--sd, #0006); }
@@ -130,7 +130,7 @@ button { cursor: pointer; }
 .chip.lime { background: #2ee59d22; border-color: #2ee59d55; color: #7ff5c4; }
 .chip.amber { background: #ffc23d22; border-color: #ffc23d55; color: #ffd77a; }
 .chip.pink { background: #ff4fa322; border-color: #ff4fa355; color: #ff9fcb; }
-.chip.cyan { background: #22d3ee22; border-color: #22d3ee55; color: #8bf0ff; }
+.chip.cyan { background: #38bdf822; border-color: #38bdf855; color: #8bf0ff; }
 .chip.red { background: #ff4d6a22; border-color: #ff4d6a55; color: #ff9aab; }
 .chip.gray { background: #ffffff0c; color: var(--dim); }
 
@@ -260,7 +260,7 @@ label.lbl { font-size: 13px; font-weight: 700; color: var(--mute); display: bloc
 .ver-pill {
   font-size: 12px;
   font-weight: 800;
-  background: linear-gradient(90deg, #2ee59d, #22d3ee);
+  background: linear-gradient(90deg, #2ee59d, #38bdf8);
   color: #062520;
   padding: 3px 10px;
   border-radius: 999px;
@@ -293,7 +293,7 @@ header.top {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: #0d0a20eb;
+  background: #0e0a22eb;
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
   padding: calc(8px + var(--safe-t)) calc(12px + var(--safe-r)) 8px calc(12px + var(--safe-l));
@@ -317,7 +317,8 @@ header.top {
 .dot.local { background: var(--cyan); }
 @keyframes ping { 70% { box-shadow: 0 0 0 7px #2ee59d00; } 100% { box-shadow: 0 0 0 0 #2ee59d00; } }
 
-.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; background: #0a071d; border: 1px solid var(--line); border-radius: 16px; padding: 4px; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; background: #0a071d; border: 1px solid var(--line); border-radius: 16px; padding: 4px; }
+.tabs.is-host { grid-template-columns: repeat(4, 1fr); }
 .tabs button {
   border: 0;
   background: transparent;
@@ -370,6 +371,19 @@ main.room {
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .steps div { background: #00000033; border-radius: 14px; padding: 8px; font-size: 12px; font-weight: 700; text-align: center; }
 .steps b { display: block; font-size: 19px; }
+
+/* Ustawienia Ekipa Live w lobby */
+.live-cfg {
+  background: #0c08227a;
+  border: 1px solid #ffffff26;
+  border-radius: 16px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.live-cfg-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #ffe0f0; }
+.live-cfg .switch { background: #0c08229e; border-color: #ffffff24; padding: 9px 11px; font-size: 13px; border-radius: 12px; }
 
 .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
 .pcard { background: #0f0b28; border: 1px solid var(--line); border-radius: 18px; padding: 11px; display: flex; flex-direction: column; gap: 8px; }
@@ -448,7 +462,7 @@ main.room {
   background:
     radial-gradient(circle at 14% 4%, #7c4dff44, transparent 45%),
     radial-gradient(circle at 96% 96%, #ff4fa338, transparent 46%),
-    radial-gradient(circle at 50% 50%, #22d3ee14, transparent 50%),
+    radial-gradient(circle at 50% 50%, #38bdf814, transparent 50%),
     radial-gradient(#ffffff10 1px, transparent 1.6px) 0 0 / 22px 22px;
 }
 .ov-top {
@@ -457,7 +471,7 @@ main.room {
   gap: 8px;
   padding: calc(10px + var(--safe-t)) calc(12px + var(--safe-r)) 10px calc(12px + var(--safe-l));
   border-bottom: 1px solid var(--line);
-  background: #0d0a20dc;
+  background: #0e0a22dc;
   backdrop-filter: blur(10px);
   flex-shrink: 0;
 }
@@ -504,8 +518,132 @@ main.room {
 }
 .lcard:hover { border-color: #7c6ce0; }
 .lcard.off { opacity: .54; filter: grayscale(.35); }
+.lcard.on-turn { border-color: var(--amber); box-shadow: 0 6px 0 var(--shadow), 0 0 0 2px #ffc23d55, 0 0 24px #ffc23d33; }
 .lcard.fresh { animation: fresh .55s cubic-bezier(.2, 1.5, .4, 1); }
 @keyframes fresh { 0% { transform: scale(.92); border-color: var(--lime); } 100% { transform: none; } }
+
+.q-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: #ffffff18;
+  border: 1px solid #ffffff28;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--amber);
+  flex-shrink: 0;
+}
+.lcard.on-turn .q-badge { background: var(--amber); color: #2b1900; border-color: #fff4; }
+
+/* Pasek kolejki tur w Ekipa Live */
+.turn-bar {
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #1b1442f2, #120d2ef2);
+  border-bottom: 1px solid var(--line);
+  padding: 9px calc(12px + var(--safe-r)) 10px calc(12px + var(--safe-l));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.turn-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.turn-status { font-weight: 800; font-size: 13px; display: flex; align-items: center; gap: 7px; }
+.turn-status.mine { color: var(--lime); }
+.turn-status.wait { color: var(--amber); }
+.turn-queue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.turn-queue::-webkit-scrollbar { display: none; }
+.q-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0b0820;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px 4px 6px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: var(--mute);
+}
+.q-pill .qn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff14;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #fff;
+}
+.q-pill.active {
+  background: linear-gradient(135deg, #ffad1f33, #ff4fa333);
+  border-color: var(--amber);
+  color: #fff;
+  box-shadow: 0 0 14px #ffc23d33;
+}
+.q-pill.active .qn { background: var(--amber); color: #2a1800; }
+.q-pill.off { opacity: .45; }
+.turn-cta { display: flex; gap: 8px; align-items: center; }
+.turn-cta .btn { min-height: 42px; }
+@media (max-width: 520px) {
+  .turn-cta { width: 100%; }
+  .turn-cta .btn-turn-done { flex: 1; min-height: 48px; font-size: 16px; }
+}
+
+/* Modal / Bottom-sheet wyboru urządzenia w Ekipa Live */
+#device-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: #050310c4;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.dev-sheet {
+  width: min(100%, 460px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+}
+.dev-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dev-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 12px;
+  border-radius: 18px;
+  min-height: 112px;
+}
+.dev-btn .dev-ico { font-size: 32px; line-height: 1; }
+.dev-btn small { font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; opacity: .9; }
+@media (max-width: 600px) {
+  #device-picker { align-items: flex-end; padding: 0; }
+  .dev-sheet {
+    width: 100%;
+    border-radius: 26px 26px 0 0;
+    border-bottom: 0;
+    padding: 20px 16px calc(22px + var(--safe-b));
+  }
+}
 
 .lc-head { display: flex; align-items: center; gap: 10px; }
 .lc-head .nick { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -536,7 +674,7 @@ main.room {
 .mini.no { background: #ff4d6a1f; color: #ffa3b2; border: 1px solid #ff4d6a55; }
 .mini:disabled { opacity: .35; pointer-events: none; }
 
-/* Dolny pasek mojego ukrytego hasła — kompaktowe przyciski PAS/SIADŁO (ochrona przed missclickiem) */
+/* Dolny pasek mojego ukrytego hasła */
 .live-me {
   flex-shrink: 0;
   border-top: 2px solid #7c4dff66;
@@ -554,79 +692,82 @@ main.room {
 .secret .q { font-family: 'Fredoka', sans-serif; font-size: 19px; letter-spacing: .2em; color: #ff9fcb; line-height: 1.1; }
 .secret-last { font-size: 12px; color: var(--amber); font-weight: 700; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .me-btns { display: flex; align-items: center; gap: 10px; flex-shrink: 0; margin-left: auto; }
-.me-btns .btn { padding: 10px 18px; font-size: 15px; border-radius: 14px; min-width: 112px; }
+.me-btns .btn { padding: 11px 18px; font-size: 15px; border-radius: 14px; min-width: 116px; min-height: 46px; }
 @media (max-width: 520px) {
-  .me-btns { width: 100%; justify-content: center; }
-  .me-btns .btn { flex: 0 1 44%; min-width: 0; padding: 10px 12px; font-size: 14px; }
+  .me-btns { width: 100%; justify-content: center; gap: 12px; }
+  .me-btns .btn { flex: 1; min-width: 0; padding: 13px 14px; font-size: 16px; min-height: 50px; }
 }
 .flash-ok { animation: fok .45s; }
 .flash-no { animation: fno .45s; }
 @keyframes fok { 30% { background: #0c6b49; } }
 @keyframes fno { 30% { background: #7a1630; } }
 
-/* Panel Notatnika (PC = boczna kolumna, Telefon = szuflada modalna) */
+/* Notatnik PC (prawa kolumna) / Szuflada na telefonie */
 .live-notes {
   display: none;
   flex-direction: column;
   gap: 10px;
-  background: #130e2ef5;
+  background: linear-gradient(160deg, #181238fa, #110d29fa);
   border-left: 1px solid var(--line);
   padding: 14px;
-  min-height: 0;
+  width: 340px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
-.live-shell.pc-mode {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-}
+.live-shell.pc-mode { flex-direction: row; }
 .live-shell.pc-mode .live-notes { display: flex; }
-@media (max-width: 960px) {
-  .live-shell.pc-mode { display: flex; flex-direction: column; }
+@media (max-width: 959px) {
+  .live-shell.pc-mode { flex-direction: column; }
   .live-shell.pc-mode .live-notes { display: none; }
 }
 .live-notes.drawer-open {
   display: flex !important;
   position: fixed;
-  inset: calc(58px + var(--safe-t)) 10px calc(12px + var(--safe-b)) 10px;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(92vw, 360px);
   z-index: 90;
-  border: 2px solid var(--cyan);
-  border-radius: 22px;
-  box-shadow: 0 24px 60px #000c;
+  box-shadow: -12px 0 40px #000b;
+  padding-top: calc(14px + var(--safe-t));
+  padding-bottom: calc(14px + var(--safe-b));
 }
 .note-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .note-tags button {
+  background: #0a071d;
   border: 1px solid var(--line);
-  background: #0b0820;
   border-radius: 9px;
-  padding: 5px 9px;
+  padding: 5px 8px;
   font-size: 11px;
   font-weight: 800;
 }
-.note-tags button:hover { border-color: var(--cyan); }
+.note-tags button:hover { border-color: var(--line-hi); }
 .note-area {
   flex: 1;
-  min-height: 140px;
+  min-height: 120px;
   width: 100%;
   background: #09061a;
   border: 1.5px solid var(--line);
-  border-radius: 15px;
-  padding: 12px;
-  font-size: 14px;
-  color: var(--ink);
+  border-radius: 14px;
+  padding: 11px;
+  font-size: 13px;
+  color: #fff;
   resize: none;
   line-height: 1.45;
   outline: none;
 }
 .note-area:focus { border-color: var(--cyan); }
-.note-hist { max-height: 130px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+.note-hist { display: flex; flex-direction: column; gap: 5px; max-height: 130px; overflow-y: auto; }
 .note-hist-item {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
   background: #0a071d;
-  border: 1px solid #2b235a;
+  border: 1px solid #2c2560;
   border-radius: 10px;
-  padding: 6px 9px;
+  padding: 5px 8px;
+  font-size: 12px;
 }
 
 /* ---------- NA CZOLE ---------- */
@@ -634,42 +775,52 @@ main.room {
 .fh-center h2 { font-family: 'Fredoka', sans-serif; font-size: 30px; }
 .fh-center p { color: var(--mute); max-width: 440px; }
 .big-ico { font-size: 62px; animation: bob 3s ease-in-out infinite; }
-.count-num { font-family: 'Fredoka', sans-serif; font-size: min(40vw, 210px); line-height: 1; background: linear-gradient(135deg, #ffc23d, #ff4fa3); -webkit-background-clip: text; background-clip: text; color: transparent; animation: cnt .9s ease; }
-@keyframes cnt { from { transform: scale(1.55); opacity: 0; } }
-.fh-card { flex: 1; margin: 12px; border-radius: 30px; background: linear-gradient(150deg, #2b1f66, #170f3c); border: 3px solid #6b56d9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; text-align: center; box-shadow: 0 20px 50px #0009; transition: background .2s, border-color .2s; }
+.count-num { font-family: 'Fredoka', sans-serif; font-size: min(42vw, 210px); line-height: 1; background: linear-gradient(135deg, #ffc23d, #ff4fa3); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.fh-card {
+  flex: 1;
+  margin: 12px;
+  border-radius: 30px;
+  background: linear-gradient(150deg, #2b1f66, #170f3c);
+  border: 3px solid #6b56d9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 20px 50px #0009;
+  transition: background .2s, border-color .2s;
+}
 .fh-card.ok { background: linear-gradient(150deg, #0b6b4a, #0a4532); border-color: var(--lime); }
 .fh-card.no { background: linear-gradient(150deg, #8a1d38, #4d0f22); border-color: var(--red); }
-.fh-word { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: clamp(32px, 8.5vw, 82px); line-height: 1.05; overflow-wrap: anywhere; }
+.fh-word { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: clamp(32px, 9vw, 82px); line-height: 1.05; overflow-wrap: anywhere; }
 .fh-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 12px calc(12px + var(--safe-b)); }
-.fh-btns .btn { padding: 22px 10px; font-size: 22px; border-radius: 22px; }
-.timer { font-family: 'Fredoka', sans-serif; font-size: 22px; font-weight: 700; min-width: 64px; text-align: center; }
-.timer.low { color: var(--red); }
+.fh-btns .btn { padding: 22px 10px; font-size: 23px; border-radius: 22px; }
 
-/* ---------- PODIUM & KONFETTI ---------- */
+/* ---------- PODIUM I KONFETTI ---------- */
 .podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 10px; max-width: 520px; margin: 0 auto; width: 100%; }
 .pod { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
-.pod .bar { width: 100%; border-radius: 18px 18px 8px 8px; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; }
+.pod .bar { width: 100%; border-radius: 18px 18px 8px 8px; display: flex; align-items: flex-start; justify-content: center; padding-top: 8px; font-family: 'Fredoka', sans-serif; font-size: 25px; font-weight: 700; }
 .pod .nm { font-weight: 800; font-size: 14px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .confetti { position: fixed; top: -20px; width: 10px; height: 14px; z-index: 95; pointer-events: none; animation: fall linear forwards; }
 @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
 
-@media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
-}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <div id="toasts" aria-live="polite"></div>
 
 <!-- ========================================================================= -->
-<!-- EKRAN STARTOWY (PROFIL + TWORZENIE / DOŁĄCZANIE DO POKOJU)                -->
+<!-- EKRAN STARTOWY (1. PROFIL -> 2. POKÓJ)                                    -->
 <!-- ========================================================================= -->
 <section id="scr-start">
   <div class="start-inner">
     <div class="logo">
-      <div class="logo-badge">🎯</div>
+      <div class="logo-badge">📱</div>
       <h1>CZÓŁKO<span>.IO</span><span class="ver-pill">1.0</span></h1>
-      <p>Oficjalna gra imprezowa dla całej ekipy — Telefon &amp; Komputer</p>
+      <p>Imprezowa gra online — Ekipa Live na Telefon i Komputer</p>
     </div>
 
     <div id="resume-box" class="resume hidden"></div>
@@ -709,7 +860,7 @@ main.room {
           <button class="btn btn-ghost btn-sm" data-act="rollCode"><i class="fa-solid fa-dice"></i> Losuj</button>
         </div>
         <input id="code-create" class="input code-input" maxlength="8" autocomplete="off" spellcheck="false" style="color:var(--amber)">
-        <p class="dim" style="font-size:12px;text-align:center">Możesz wpisać własną nazwę (3–8 znaków, np. <b style="color:#fff">EKIPA</b>). Podasz ją znajomym.</p>
+        <p class="dim" style="font-size:12px;text-align:center">Możesz wpisać własny kod (3–8 znaków, np. <b style="color:#fff">EKIPA</b>). Podasz go znajomym.</p>
       </div>
       <div id="box-join" class="stack hidden" style="gap:8px">
         <label class="lbl" for="code-join" style="text-align:center">Kod od znajomego</label>
@@ -722,20 +873,20 @@ main.room {
 </section>
 
 <!-- ========================================================================= -->
-<!-- POKÓJ GRY (NAGŁÓWEK + 4 ZAKŁADKI: LOBBY / HASŁA / RANKING / ADMIN)        -->
+<!-- POKÓJ GRY                                                                 -->
 <!-- ========================================================================= -->
 <section id="scr-room" class="hidden">
   <header class="top">
     <div class="top-inner">
       <div class="row">
-        <button class="code-chip grow" data-act="invite" title="Skopiuj kod lub udostępnij link">
+        <button class="code-chip grow" data-act="invite" title="Skopiuj kod / link zaproszenia">
           <span id="hdr-av" class="av sm"></span>
           <span style="text-align:left;min-width:0">
             <span class="row" style="gap:6px">
               <span class="dim" style="font-size:11px;font-weight:800">KOD</span>
               <b id="hdr-code">-----</b>
+              <span id="hdr-sec" class="chip lime" style="font-size:9px;padding:1px 6px">1.0</span>
               <i class="fa-regular fa-copy dim" style="font-size:12px"></i>
-              <span id="hdr-sec" class="chip lime" style="font-size:10px;padding:1px 6px" title="Stan pokoju podpisany kryptograficznie przez Hosta">🔒 1.0</span>
             </span>
             <span class="row" style="gap:6px;font-size:12px;font-weight:700">
               <span id="hdr-dot" class="dot"></span>
@@ -743,15 +894,15 @@ main.room {
             </span>
           </span>
         </button>
-        <button class="btn btn-ghost icon-btn" data-act="sound" title="Włącz/wyłącz dźwięk"><i id="snd-ico" class="fa-solid fa-volume-high"></i></button>
+        <button class="btn btn-ghost icon-btn" data-act="sound" title="Dźwięk"><i id="snd-ico" class="fa-solid fa-volume-high"></i></button>
         <button class="btn btn-ghost icon-btn" data-act="fullscreen" title="Pełny ekran"><i class="fa-solid fa-expand"></i></button>
         <button class="btn btn-ghost icon-btn" data-act="leave" title="Opuść pokój" style="color:#ff9aab"><i class="fa-solid fa-right-from-bracket"></i></button>
       </div>
-      <nav class="tabs">
+      <nav class="tabs" id="main-tabs">
         <button data-act="tab" data-t="lobby" id="tab-lobby"><i class="fa-solid fa-house"></i> Lobby</button>
         <button data-act="tab" data-t="words" id="tab-words"><i class="fa-solid fa-fire-flame-curved" style="color:var(--pink)"></i> Hasła <span class="cnt" id="cnt-words">0</span></button>
         <button data-act="tab" data-t="rank" id="tab-rank"><i class="fa-solid fa-trophy" style="color:var(--amber)"></i> Ranking</button>
-        <button data-act="tab" data-t="admin" id="tab-admin"><i class="fa-solid fa-shield-halved" style="color:var(--cyan)"></i> Host</button>
+        <button data-act="tab" data-t="admin" id="tab-admin" class="hidden"><i class="fa-solid fa-shield-halved" style="color:var(--cyan)"></i> Host</button>
       </nav>
     </div>
   </header>
@@ -762,13 +913,10 @@ main.room {
       <div id="live-banner" class="banner hidden">
         <span style="font-size:28px">🎮</span>
         <div class="grow">
-          <div class="kicker" style="color:var(--lime)">Ekipa Live trwa na żywo!</div>
-          <div style="font-weight:700;font-size:14px">Gracze mają już wylosowane hasła — dołącz z telefonu lub komputera.</div>
+          <div class="kicker" style="color:var(--lime)">Ekipa Live aktywna!</div>
+          <div style="font-weight:700;font-size:14px">Gracze mają już wylosowane hasła — dołącz i wybierz swój widok (Tel / PC).</div>
         </div>
-        <div class="row" style="gap:6px">
-          <button class="btn btn-go btn-sm" data-act="joinLive" data-layout="phone"><i class="fa-solid fa-mobile-screen"></i> Tel</button>
-          <button class="btn btn-cyan btn-sm" data-act="joinLive" data-layout="pc"><i class="fa-solid fa-desktop"></i> PC</button>
-        </div>
+        <button class="btn btn-go btn-sm" data-act="joinLive"><i class="fa-solid fa-play"></i> Dołącz</button>
       </div>
 
       <div class="modes">
@@ -778,12 +926,32 @@ main.room {
             <div class="kicker" style="color:#ffd6ea">Tryb główny • Online</div>
             <h3>Ekipa Live</h3>
           </div>
-          <p>Każdy dostaje hasło ze wspólnego worka. <b>Nie widzisz wyłącznie hasła przypisanego sobie</b> — u reszty ekipy widzisz awatar, nick, hasło i autora. Na PC masz dodatkowo <b>Notatnik Podpowiedzi</b>.</p>
+          <p>Jedna wspólna sesja dla wszystkich — <b>każdy sam wybiera układ Telefon lub Komputer</b>. Widzisz hasła pozostałych graczy oprócz swojego.</p>
           <div class="steps">
             <div><b>👀</b>Widzisz innych</div>
-            <div><b>📝</b>Notujesz na PC/Tel</div>
+            <div><b>📱💻</b>Tel + PC razem</div>
             <div><b>🔥</b>Siadło / Pass</div>
           </div>
+
+          <div class="live-cfg" id="live-settings-panel">
+            <div class="live-cfg-head">
+              <span><i class="fa-solid fa-sliders"></i> Ustawienia Ekipa Live</span>
+              <span id="live-cfg-who" style="color:#ffd77a">Tylko Host</span>
+            </div>
+            <button class="switch" data-act="liveSetting" data-k="liveRandomOrder" id="sw-liveOrder">
+              <span>🎲 Losuj kolejność graczy (kolejka tur)</span>
+              <span class="tg"></span>
+            </button>
+            <button class="switch" data-act="liveSetting" data-k="liveConfirmTurn" id="sw-liveConfirm">
+              <span>✋ Wymagaj potwierdzenia przed następnym</span>
+              <span class="tg"></span>
+            </button>
+            <button class="switch" data-act="liveSetting" data-k="peerJudge" id="sw-livePeer">
+              <span>✅ Ekipa może zaliczać karty innych</span>
+              <span class="tg"></span>
+            </button>
+          </div>
+
           <div id="live-cta"></div>
         </div>
 
@@ -793,7 +961,7 @@ main.room {
             <div class="kicker" style="color:#b8f3ff">Tryb klasyczny</div>
             <h3>Na czole</h3>
           </div>
-          <p>Jeden telefon przyłożony do czoła, ekipa podpowiada! Wybierz czas rundy (60s / 90s / 120s / ∞), a punkty i historia lecą prosto do wspólnego rankingu.</p>
+          <p>Jeden telefon przyłożony do czoła, ekipa podpowiada! <b>Bez limitu czasu (∞)</b> — grajcie ile chcecie, a punkty i historia lecą prosto do rankingu.</p>
           <div style="margin-top:auto">
             <button class="btn btn-cyan btn-block" data-act="fhOpen"><i class="fa-solid fa-mobile-screen-button" style="transform:rotate(-90deg)"></i> Graj na czole</button>
           </div>
@@ -838,7 +1006,7 @@ main.room {
         <div class="card stack" style="gap:10px">
           <h3 style="font-size:17px"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--pink)"></i> Brak pomysłów?</h3>
           <p class="muted" style="font-size:13px">Dorzuć 25 losowych haseł z gotowej bazy (TikTok, ekipa, przypały, klasyki) bez duplikatów.</p>
-          <button class="btn btn-pri btn-sm" data-act="pack">+25 losowych gotowców</button>
+          <button class="btn btn-pri btn-sm" data-act="pack">+25 gotowych haseł</button>
         </div>
         <div class="card stack" style="gap:10px">
           <h3 style="font-size:17px"><i class="fa-solid fa-share-nodes" style="color:var(--blue)"></i> Paczka na Discord</h3>
@@ -879,7 +1047,7 @@ main.room {
       </div>
     </div>
 
-    <!-- ZAKŁADKA 4: PANEL HOSTA / ADMINISTRACJA -->
+    <!-- ZAKŁADKA 4: PANEL HOSTA (TYLKO DLA HOSTA) -->
     <div id="view-admin" class="stack hidden" style="gap:16px">
       <div class="card stack">
         <div class="row between wrap">
@@ -906,7 +1074,7 @@ main.room {
           <button class="btn btn-no btn-sm" data-act="closeRoom"><i class="fa-solid fa-door-closed"></i> Zamknij pokój dla wszystkich</button>
         </div>
         <p class="dim" style="font-size:12px">
-          🔐 Stan pokoju jest podpisywany kryptograficznie przez Hosta (ECDSA P-256), a każdy gracz uwierzytelnia akcje prywatnym tokenem sesji. Gdy Host rozłączy się na dłużej, najstarszy gracz online płynnie przejmie rolę Hosta.
+          🔐 Stan pokoju jest chroniony przez CryptoGuard (ECDSA P-256 na HTTPS lub lekki token sesji na file://). Gdy Host wyjdzie, najstarszy gracz online przejmuje pokój.
         </p>
       </div>
 
@@ -931,20 +1099,20 @@ main.room {
       Ekipa Live <span id="live-mode-tag" class="chip cyan" style="font-size:10px;padding:1px 6px;vertical-align:middle">AUTO</span>
       <small id="live-sub"></small>
     </div>
-    <button class="btn btn-ghost btn-sm" data-act="toggleLayout" id="btn-toggle-layout" title="Przełącz widok Telefon / Komputer (Notatnik)">
-      <i class="fa-solid fa-desktop"></i> <span class="hide-xs">PC</span>
+    <button class="btn btn-ghost btn-sm" data-act="toggleLayout" id="btn-toggle-layout" title="Przełącz swój układ Telefon ↔ Komputer">
+      <i class="fa-solid fa-repeat"></i> Tel ↔ PC
     </button>
     <button class="btn btn-ghost btn-sm" data-act="toggleDrawerNotes" id="btn-mobile-notes" title="Otwórz Notatnik">
       <i class="fa-solid fa-pen-to-square" style="color:var(--cyan)"></i>
     </button>
     <button class="btn btn-ghost btn-sm" data-act="quickAdd" title="Dorzuć hasło"><i class="fa-solid fa-plus"></i></button>
     <button id="live-deal" class="btn btn-ghost btn-sm hidden" data-act="dealMissing" title="Rozdaj brakujące hasła"><i class="fa-solid fa-shuffle"></i></button>
-    <button id="live-end" class="btn btn-amber btn-sm hidden" data-act="endLive" title="Zakończ grę i pokaż Podium"><i class="fa-solid fa-flag-checkered"></i></button>
+    <button id="live-end" class="btn btn-amber btn-sm hidden" data-act="endLive" title="Zakończ Ekipa Live i pokaż Podium"><i class="fa-solid fa-flag-checkered"></i></button>
   </div>
 
   <div id="live-shell" class="live-shell">
-    <!-- LEWA / GŁÓWNA KOLUMNA: KARTY INNYCH GRACZY + MOJE UKRYTE HASŁO -->
     <div class="live-main">
+      <div id="turn-bar" class="turn-bar hidden"></div>
       <div class="live-body">
         <p class="live-hint">👇 Widzisz hasła pozostałych graczy — swoje masz ukryte! Gdy ekipa powie, że zgadłeś, kliknij <b>SIADŁO</b>.</p>
         <div id="live-grid" class="live-grid"></div>
@@ -973,7 +1141,6 @@ main.room {
       </div>
     </div>
 
-    <!-- PRAWA KOLUMNA (PC) / SZUFLADA (TELEFON): NOTATNIK PODPOWIEDZI -->
     <aside id="live-notes" class="live-notes" aria-label="Notatnik Podpowiedzi">
       <div class="row between" style="border-bottom:1px solid var(--line);padding-bottom:8px">
         <div class="row" style="gap:8px">
@@ -1021,7 +1188,34 @@ main.room {
 <section id="scr-sum" class="overlay hidden" style="z-index:85"></section>
 
 <!-- ========================================================================= -->
-<!-- UNIWERSALNY MODAL (BEZ NATYWNYCH alert() / confirm())                     -->
+<!-- WYBÓR URZĄDZENIA PER-GRACZ W EKIPA LIVE (MODAL / BOTTOM-SHEET)            -->
+<!-- ========================================================================= -->
+<div id="device-picker" class="hidden" role="dialog" aria-modal="true" aria-labelledby="dev-picker-title">
+  <div class="card dev-sheet">
+    <div>
+      <div class="kicker" style="color:var(--cyan)">Ekipa Live • Twój widok</div>
+      <h3 id="dev-picker-title" class="display" style="font-size:26px;margin-top:2px">Na czym grasz?</h3>
+      <p class="muted" style="font-size:13px;margin-top:4px">Wybór dotyczy tylko Twojego ekranu — w jednej sesji możecie grać jednocześnie na telefonach i komputerach.</p>
+    </div>
+    <div id="dev-picker-order-info" class="hidden" style="display:flex;justify-content:center"></div>
+    <div class="dev-choices">
+      <button class="btn btn-go dev-btn" data-act="pickDevice" data-dev="phone">
+        <span class="dev-ico">📱</span>
+        <span>Telefon</span>
+        <small>Wygodny widok pionowy</small>
+      </button>
+      <button class="btn btn-cyan dev-btn" data-act="pickDevice" data-dev="pc">
+        <span class="dev-ico">💻</span>
+        <span>Komputer</span>
+        <small>Szeroka siatka + Notatnik</small>
+      </button>
+    </div>
+    <p class="dim" style="font-size:11px">Możesz to przełączyć w każdej chwili przyciskiem <b>Tel ↔ PC</b> u góry ekranu.</p>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- UNIWERSALNY MODAL (BEZ alert() / confirm())                               -->
 <!-- ========================================================================= -->
 <div id="modal" class="hidden"><div id="modal-box" class="card"></div></div>
 
@@ -1029,20 +1223,9 @@ main.room {
 <script>
 'use strict';
 /* ============================================================================
-   CZÓŁKO 1.0 — SILNIK GRY, BEZPIECZEŃSTWO KRYPTOGRAFICZNE I SYNCHRONIZACJA
-   ----------------------------------------------------------------------------
-   1. Architektura Host-Authoritative: Host jest jedynym źródłem prawdy dla
-      stanu pokoju (S), punktacji, losowania haseł i uprawnień.
-   2. Podpis kryptograficzny (Web Crypto ECDSA P-256): każda publikacja stanu
-      oraz komendy kick/deny są podpisane kluczem prywatnym Hosta i weryfikowane
-      przez klientów przed zastosowaniem.
-   3. Tokeny graczy (playerToken): każdy gracz uwierzytelnia swoje akcje
-      prywatnym tokenem znanym tylko jemu i Hostowi (nigdy nie trafia do S).
-   4. Transport: MQTT v4 z failoverem (EMQX -> HiveMQ) + automatyczny fallback
-      na BroadcastChannel w środowiskach offline / testach wielokartowych.
+   CZÓŁKO 1.0 — SILNIK GRY, BEZPIECZEŃSTWO I SYNCHRONIZACJA
    ============================================================================ */
-
-const ROOT = 'czolko_io_pl_v1_0';
+const ROOT = 'czolko_io_pl_v10';
 const APP_ID = 'czolko_1_0';
 const BROKERS = [
   'wss://broker.emqx.io:8084/mqtt',
@@ -1099,19 +1282,35 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l').replace(/Ł/g, 'l').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const rand = n => {
+
+function rand(n) {
   if (n <= 1) return 0;
-  const a = new Uint32Array(1);
-  const limit = Math.floor(0x100000000 / n) * n;
-  do { crypto.getRandomValues(a); } while (a[0] >= limit);
-  return a[0] % n;
-};
-const rid = p => p + Array.from(crypto.getRandomValues(new Uint8Array(10)), b => b.toString(16).padStart(2, '0')).join('');
+  try {
+    if (window.crypto && crypto.getRandomValues) {
+      const a = new Uint32Array(1);
+      const limit = Math.floor(0x100000000 / n) * n;
+      do { crypto.getRandomValues(a); } while (a[0] >= limit);
+      return a[0] % n;
+    }
+  } catch {}
+  return Math.floor(Math.random() * n);
+}
+
+function rid(p) {
+  try {
+    if (window.crypto && crypto.getRandomValues) {
+      return p + Array.from(crypto.getRandomValues(new Uint8Array(10)), b => b.toString(16).padStart(2, '0')).join('');
+    }
+  } catch {}
+  return p + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   del(k) { try { localStorage.removeItem(k); } catch {} }
 };
+
 function randCode() {
   const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s = '';
@@ -1126,13 +1325,13 @@ function timeAgo(ts) {
   return (s / 3600 | 0) + ' h temu';
 }
 
-/* ---------- MODUŁ BEZPIECZEŃSTWA (WEB CRYPTO ECDSA P-256) ---------- */
+/* ---------- CRYPTOGUARD (BEZPIECZNY NA file:// ORAZ HTTPS) ---------- */
 const CryptoGuard = (() => {
   let supported = false;
   let privKey = null;
   let pubJwk = null;
   const keyCache = new Map();
-  const enc = new TextEncoder();
+  const enc = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
 
   function b64e(buf) {
     const bytes = new Uint8Array(buf);
@@ -1148,26 +1347,32 @@ const CryptoGuard = (() => {
   }
 
   async function init() {
-    if (privKey || !window.crypto?.subtle) return supported;
+    if (privKey) return supported;
+    if (!window.crypto || !window.crypto.subtle || !enc) {
+      supported = false;
+      return false;
+    }
     try {
-      const pair = await crypto.subtle.generateKey(
+      const pair = await window.crypto.subtle.generateKey(
         { name: 'ECDSA', namedCurve: 'P-256' },
         false,
         ['sign', 'verify']
       );
       privKey = pair.privateKey;
-      pubJwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+      pubJwk = await window.crypto.subtle.exportKey('jwk', pair.publicKey);
       supported = true;
     } catch {
       supported = false;
+      privKey = null;
+      pubJwk = null;
     }
     return supported;
   }
 
   async function sign(text) {
-    if (!supported || !privKey) return '';
+    if (!supported || !privKey || !enc) return '';
     try {
-      const sig = await crypto.subtle.sign(
+      const sig = await window.crypto.subtle.sign(
         { name: 'ECDSA', hash: 'SHA-256' },
         privKey,
         enc.encode(text)
@@ -1177,12 +1382,12 @@ const CryptoGuard = (() => {
   }
 
   async function verify(text, sigB64, jwk) {
-    if (!jwk || !sigB64 || !window.crypto?.subtle) return false;
+    if (!supported || !jwk || !sigB64 || !window.crypto || !window.crypto.subtle || !enc) return true;
     try {
       const cacheKey = `${jwk.x}.${jwk.y}`;
       let key = keyCache.get(cacheKey);
       if (!key) {
-        key = await crypto.subtle.importKey(
+        key = await window.crypto.subtle.importKey(
           'jwk',
           { kty: 'EC', crv: 'P-256', x: jwk.x, y: jwk.y, ext: true },
           { name: 'ECDSA', namedCurve: 'P-256' },
@@ -1192,7 +1397,7 @@ const CryptoGuard = (() => {
         if (keyCache.size > 24) keyCache.clear();
         keyCache.set(cacheKey, key);
       }
-      return await crypto.subtle.verify(
+      return await window.crypto.subtle.verify(
         { name: 'ECDSA', hash: 'SHA-256' },
         key,
         b64d(sigB64),
@@ -1292,11 +1497,11 @@ function saveProfile() { store.set('cz10_profile', profile); }
 function setPid(id) { pid = id; try { sessionStorage.setItem('cz10_pid', pid); } catch {} }
 
 /* ---------- STAN POKOJU I SIECI ---------- */
-let S = null; // Autorytatywny stan pokoju (kopia od Hosta)
+let S = null;
 const net = {
   client: null,
   bc: null,
-  transport: 'none', // 'mqtt' | 'local' | 'none'
+  transport: 'none',
   code: '',
   base: '',
   joined: false,
@@ -1309,8 +1514,8 @@ const net = {
   denied: null,
   lastLive: 0,
   lastSeen: {},
-  playerTokens: {}, // Tylko u Hosta: { [playerId]: secretToken }
-  rateBuckets: {},  // Tylko u Hosta: anti-spam
+  playerTokens: {},
+  rateBuckets: {},
   lastPub: 0,
   pubTimer: null,
   lastJoinSent: 0,
@@ -1323,7 +1528,8 @@ const net = {
   tickN: 0,
   myCooldownUntil: 0,
   lastRevealed: '',
-  mySessionHist: []
+  mySessionHist: [],
+  liveNotifiedAt: 0
 };
 
 const ui = {
@@ -1332,7 +1538,8 @@ const ui = {
   cat: CATS[0],
   spoiler: false,
   renderQ: false,
-  layoutPref: 'auto', // 'auto' | 'phone' | 'pc'
+  layoutPref: 'auto',
+  devicePickedAt: 0,
   drawerOpen: false
 };
 
@@ -1393,21 +1600,24 @@ function attachMqtt(c, code) {
 
 function attachLocalChannel(code) {
   if (typeof BroadcastChannel === 'undefined') return false;
-  net.bc = new BroadcastChannel(`czolko_1_0_local_${code}`);
-  net.transport = 'local';
-  net.code = code;
-  net.base = `${ROOT}/${code}`;
-  net.connected = true;
-  net.connAt = Date.now();
-  net.peek = null;
-  net.denied = null;
-  net.bc.onmessage = ev => {
-    if (!ev?.data) return;
-    handleIncoming(ev.data.sub, ev.data.payload, !!ev.data.retain);
-  };
-  // W trybie lokalnym pytamy istniejące karty o obecny stan
-  net.bc.postMessage({ sub: 'act', payload: JSON.stringify({ t: 'local_peek', from: pid }), retain: false });
-  return true;
+  try {
+    net.bc = new BroadcastChannel(`czolko_1_0_local_${code}`);
+    net.transport = 'local';
+    net.code = code;
+    net.base = `${ROOT}/${code}`;
+    net.connected = true;
+    net.connAt = Date.now();
+    net.peek = null;
+    net.denied = null;
+    net.bc.onmessage = ev => {
+      if (!ev || !ev.data) return;
+      handleIncoming(ev.data.sub, ev.data.payload, !!ev.data.retain);
+    };
+    net.bc.postMessage({ sub: 'act', payload: JSON.stringify({ t: 'local_peek', from: pid }), retain: false });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function dropNet() {
@@ -1452,15 +1662,14 @@ async function handleIncoming(sub, txt, retained) {
     }
     let env;
     try { env = JSON.parse(txt); } catch { return; }
-    // Koperta podpisana: { d: jsonString, s: signature, pk: hostPubJwk }
     let s = null;
     let sigValid = false;
     if (env && typeof env.d === 'string') {
       try { s = JSON.parse(env.d); } catch { return; }
       if (env.s && env.pk && CryptoGuard.supported) {
         sigValid = await CryptoGuard.verify(env.d, env.s, env.pk);
-      } else if (!CryptoGuard.supported) {
-        sigValid = true; // Fallback dla nieszyfrowanych kontekstów lokalnych (file://)
+      } else {
+        sigValid = true;
       }
     } else {
       return;
@@ -1493,7 +1702,6 @@ function jwkEqual(a, b) {
 }
 
 function onState(s, retained, sigValid, senderPk) {
-  // Odrzucamy zmanipulowane pakiety z niepoprawnym podpisem (w kontekście z WebCrypto)
   if (CryptoGuard.supported && s.hostPub && !sigValid) return;
 
   if (!net.joined) {
@@ -1514,15 +1722,11 @@ function onState(s, retained, sigValid, senderPk) {
     return;
   }
 
-  // Weryfikacja ciągłości klucza Hosta:
-  // Dopóki aktualny host jest żywy, akceptujemy tylko stan podpisany jego kluczem,
-  // chyba że aktualny stan jawnie przekazał hosta (hostTransferTo === s.hostId)
-  // albo poprzedni host nie dawał znaku życia od > 13 s (legalny failover).
   const hostStillAlive = (Date.now() - net.lastLive) <= 13000;
   const sameHostKey = !S.hostPub || jwkEqual(S.hostPub, senderPk);
   const authorizedTransfer = S.hostTransferTo === s.hostId;
   if (s.hostId !== pid && hostStillAlive && !sameHostKey && !authorizedTransfer) {
-    return; // Odrzuć próbę podszycia się pod żywego Hosta!
+    return;
   }
 
   if (s.closed) {
@@ -1553,7 +1757,6 @@ function adopt(s) {
   if (S.hostId === pid && !net.amHost) {
     becomeHost();
   } else if (prevHost && prevHost !== S.hostId) {
-    // Host się zmienił -> wyślij token ponownie, żeby nowy Host znał nasz sekret sesji
     sendJoin();
   }
   if (!S.players[pid] && Date.now() - net.lastJoinSent > 2500) sendJoin();
@@ -1572,10 +1775,9 @@ function becomeHost() {
 }
 
 async function onAct(m) {
-  // Weryfikacja komend administracyjnych (deny / kick) — muszą być podpisane przez aktualnego Hosta!
   if ((m.t === 'deny' || m.t === 'kick') && m.to === pid) {
     if (S && m.from !== S.hostId) return;
-    if (CryptoGuard.supported && S?.hostPub) {
+    if (CryptoGuard.supported && S && S.hostPub && m.s) {
       const ok = await CryptoGuard.verify(m.d || '', m.s || '', S.hostPub);
       if (!ok) return;
     }
@@ -1626,11 +1828,11 @@ function newState(code) {
     closed: false,
     locked: false,
     vip: { enabled: false, list: [] },
-    rules: { noOwn: true, passMinus: true, peerJudge: false },
+    rules: { noOwn: true, passMinus: true, peerJudge: true, liveRandomOrder: false, liveConfirmTurn: false },
     players: {},
     words: [],
     used: [],
-    live: { on: false, started: 0, base: {} },
+    live: { on: false, started: 0, base: {}, settings: { randomOrder: false, confirmTurn: false }, order: [], turnIdx: 0 },
     hist: [],
     summary: null,
     kicked: []
@@ -1664,7 +1866,7 @@ function setEnterBusy(on, txt = '') {
 async function enterRoom(mode, code) {
   if (net.busy) return;
   net.busy = true;
-  setEnterBusy(true, 'Przygotowuję klucze bezpieczeństwa…');
+  setEnterBusy(true, 'Przygotowuję sesję…');
   await CryptoGuard.init();
 
   try {
@@ -1687,13 +1889,12 @@ async function enterRoom(mode, code) {
       }
     }
 
-    // Jeśli brokery MQTT są niedostępne (offline / zablokowane WebSockets) -> płynny Tryb Lokalny (BroadcastChannel)
     if (!connectedMqtt && attachLocalChannel(code)) {
       setEnterBusy(true, 'Brak sieci MQTT — uruchamiam Tryb Lokalny (wiele kart)…');
       const st = await waitPeek(600);
       const handled = await resolveRoomEntry(mode, code, st);
       if (handled === true) {
-        toast('Tryb lokalny (bez serwera) — możesz testować na wielu kartach tej przeglądarki.', 'warn', 4200);
+        toast('Tryb lokalny — możesz testować i grać na wielu kartach tej przeglądarki.', 'warn', 4200);
         return;
       }
       lastErr = handled;
@@ -1736,7 +1937,7 @@ async function resolveRoomEntry(mode, code, st) {
   }
   if (st.locked && !member) throw 'Ten pokój jest zablokowany przez Hosta.';
   if (st.kicked && st.kicked.includes(pid)) throw 'Host wyrzucił Cię z tego pokoju.';
-  if (st.vip?.enabled && !member && !st.vip.list.includes(profile.nick.toLowerCase())) {
+  if (st.vip && st.vip.enabled && !member && !st.vip.list.includes(profile.nick.toLowerCase())) {
     throw 'Pokój wymaga nicku z listy VIP ustawionej przez Hosta.';
   }
   await joinExisting(st);
@@ -1773,11 +1974,17 @@ function startAsHost(s) {
   S.closed = false;
   S.kicked = S.kicked || [];
   S.vip = S.vip || { enabled: false, list: [] };
-  S.rules = Object.assign({ noOwn: true, passMinus: true, peerJudge: false }, S.rules || {});
+  S.rules = Object.assign({ noOwn: true, passMinus: true, peerJudge: true, liveRandomOrder: false, liveConfirmTurn: false }, S.rules || {});
+  S.live = Object.assign({ on: false, started: 0, base: {}, settings: { randomOrder: false, confirmTurn: false }, order: [], turnIdx: 0 }, S.live || {});
+  S.live.settings = Object.assign({ randomOrder: false, confirmTurn: false }, S.live.settings || {});
+  if (!Array.isArray(S.live.order)) S.live.order = [];
 
   const me = S.players[pid];
-  if (me) Object.assign(me, { nick: profile.nick, av: profile.av, img: !!profile.img, on: true });
-  else S.players[pid] = mkPlayer(myProfileForNet(), pid);
+  if (me) {
+    Object.assign(me, { nick: profile.nick, av: profile.av, img: !!profile.img, on: true });
+  } else {
+    S.players[pid] = mkPlayer(myProfileForNet(), pid);
+  }
 
   net.amHost = true;
   net.playerTokens[pid] = myToken;
@@ -1796,6 +2003,8 @@ function finishJoin() {
   net.pend = {};
   net.lastRevealed = '';
   net.mySessionHist = [];
+  net.liveNotifiedAt = S.live && S.live.on ? S.live.started : 0;
+  ui.devicePickedAt = 0;
 
   if (profile.img) publishAvatar();
   if (!net.amHost) sendJoin();
@@ -1832,9 +2041,10 @@ function resetLocal() {
   net.playerTokens = {};
   net.rateBuckets = {};
   ui.drawerOpen = false;
+  ui.devicePickedAt = 0;
   fhStop(true);
   keepAwake(false);
-  ['#scr-live', '#scr-sum', '#scr-fh'].forEach(s => $(s).classList.add('hidden'));
+  ['#scr-live', '#scr-sum', '#scr-fh', '#device-picker'].forEach(s => $(s).classList.add('hidden'));
   closeModal();
   $('#scr-room').classList.add('hidden');
   $('#scr-start').classList.remove('hidden');
@@ -1853,7 +2063,7 @@ async function leaveRoom() {
   if (net.amHost) {
     const next = candidates().find(p => p.id !== pid);
     const me = S.players[pid];
-    if (me) freeWord(me);
+    if (me) { freeWord(me); removeFromTurnOrder(pid); }
     delete S.players[pid];
     if (next) {
       S.hostTransferTo = next.id;
@@ -1906,7 +2116,7 @@ function loopTick() {
 }
 
 /* ============================================================================
-   LOGIKA HOSTA (JEDYNE ŹRÓDŁO PRAWDY + PODPISY + WALIDACJA TOKENÓW)
+   LOGIKA HOSTA (JEDYNE ŹRÓDŁO PRAWDY)
    ============================================================================ */
 async function hostPublishNow() {
   clearTimeout(net.pubTimer);
@@ -1968,6 +2178,40 @@ function uniqNick(nick, id) {
 
 function wordById(id) { return id ? S.words.find(w => w.id === id) : null; }
 function freeWord(p) { if (p.wid) { S.used = S.used.filter(id => id !== p.wid); p.wid = null; } }
+
+function shuffleArray(arr) {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = rand(i + 1);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function removeFromTurnOrder(id) {
+  if (!S || !S.live || !S.live.on || !Array.isArray(S.live.order)) return;
+  const idx = S.live.order.indexOf(id);
+  if (idx === -1) return;
+  S.live.order.splice(idx, 1);
+  if (!S.live.order.length) { S.live.turnIdx = 0; return; }
+  if (idx < S.live.turnIdx) S.live.turnIdx--;
+  if (S.live.turnIdx >= S.live.order.length) S.live.turnIdx = 0;
+}
+
+function ensureTurnOrderIntegrity() {
+  if (!S || !S.live || !S.live.on || !S.live.settings || !S.live.settings.randomOrder) return;
+  if (!Array.isArray(S.live.order)) S.live.order = [];
+  const validLiveIds = new Set(Object.values(S.players).filter(p => p.mode === 'live').map(p => p.id));
+  for (let i = S.live.order.length - 1; i >= 0; i--) {
+    if (!validLiveIds.has(S.live.order[i])) removeFromTurnOrder(S.live.order[i]);
+  }
+  for (const id of validLiveIds) {
+    if (!S.live.order.includes(id)) S.live.order.push(id);
+  }
+  if (!S.live.order.length || S.live.turnIdx < 0 || S.live.turnIdx >= S.live.order.length) {
+    S.live.turnIdx = 0;
+  }
+}
 
 function drawFor(p) {
   const assigned = new Set(Object.values(S.players).map(x => x.wid).filter(Boolean));
@@ -2036,12 +2280,10 @@ function hostApply(m) {
   const p = S.players[m.from];
   if (m.from !== pid) net.lastSeen[m.from] = Date.now();
 
-  // Weryfikacja tokenu gracza dla wszystkich akcji poza pierwszym 'join'
   if (m.t !== 'join' && m.from !== pid) {
     const expectedTok = net.playerTokens[m.from];
-    if (expectedTok && m.tok !== expectedTok) return; // Odrzuć podszywanie się pod innego gracza!
+    if (expectedTok && m.tok !== expectedTok) return;
     if (!expectedTok && typeof m.tok === 'string' && m.tok.length >= 8) {
-      // Po migracji hosta przypisz token gracza przy pierwszej zweryfikowanej aktywności
       net.playerTokens[m.from] = m.tok;
     }
   }
@@ -2057,13 +2299,12 @@ function hostApply(m) {
         return;
       }
       const info = cleanProfile(m.p);
-      if (S.vip?.enabled && !p && !S.vip.list.includes(info.nick.toLowerCase())) {
+      if (S.vip && S.vip.enabled && !p && !S.vip.list.includes(info.nick.toLowerCase())) {
         hostSendSignedControl('deny', m.from, 'Pokój wymaga nicku z listy VIP.');
         return;
       }
-      // Zapisz lub zweryfikuj token gracza
       if (p && net.playerTokens[m.from] && m.tok && net.playerTokens[m.from] !== m.tok) {
-        return; // Próba przejęcia istniejącego pid innego gracza
+        return;
       }
       if (typeof m.tok === 'string' && m.tok.length >= 8) net.playerTokens[m.from] = m.tok;
 
@@ -2079,6 +2320,7 @@ function hostApply(m) {
     case 'leave':
       if (!p) return;
       freeWord(p);
+      removeFromTurnOrder(m.from);
       delete S.players[m.from];
       delete net.playerTokens[m.from];
       break;
@@ -2116,7 +2358,6 @@ function hostApply(m) {
     case 'res': {
       const tp = S.players[m.target];
       if (!p || !tp || tp.mode !== 'live' || !tp.wid || tp.wid !== m.wid) return;
-      // Czy gracz może oceniać cudzą kartę? Tylko jeśli to jego własna karta, jest Hostem albo włączono rules.peerJudge
       if (m.target !== m.from && m.from !== S.hostId && !S.rules.peerJudge) return;
       const w = wordById(tp.wid);
       if (!w) return;
@@ -2138,8 +2379,12 @@ function hostApply(m) {
         if (!S.live.on) return;
         p.mode = 'live';
         if (!p.wid) drawFor(p);
+        if (S.live.settings && S.live.settings.randomOrder && Array.isArray(S.live.order) && !S.live.order.includes(p.id)) {
+          S.live.order.push(p.id);
+        }
       } else if (m.mode === 'fh') {
         freeWord(p);
+        removeFromTurnOrder(p.id);
         p.mode = 'fh';
       }
       break;
@@ -2147,8 +2392,18 @@ function hostApply(m) {
     case 'exit':
       if (!p) return;
       freeWord(p);
+      removeFromTurnOrder(p.id);
       p.mode = 'lobby';
       break;
+    case 'nextTurn': {
+      if (!p || !S.live.on || !S.live.settings || !S.live.settings.randomOrder) return;
+      ensureTurnOrderIntegrity();
+      if (!S.live.order.length) return;
+      const currentId = S.live.order[S.live.turnIdx];
+      if (m.from !== currentId && m.from !== S.hostId) return;
+      S.live.turnIdx = (S.live.turnIdx + 1) % S.live.order.length;
+      break;
+    }
     default:
       return;
   }
@@ -2160,25 +2415,50 @@ function hostOnly() {
   return true;
 }
 
-function hostStartLive(layout) {
+function hostStartLive() {
   if (!hostOnly()) return;
   if (!S.words.length) {
-    toast('Worek jest pusty — dorzućcie hasła albo kliknijcie +25 gotowców!', 'warn', 3500);
+    toast('Worek jest pusty — dorzućcie hasła albo kliknijcie +25 gotowych haseł!', 'warn', 3500);
     ui.tab = 'words';
     render();
     return;
   }
-  if (layout) ui.layoutPref = layout;
-  S.live = { on: true, started: Date.now(), base: {} };
+  const cfg = {
+    randomOrder: !!S.rules.liveRandomOrder,
+    confirmTurn: !!(S.rules.liveRandomOrder && S.rules.liveConfirmTurn)
+  };
+  const base = {};
+  const liveIds = [];
   for (const p of Object.values(S.players)) {
-    S.live.base[p.id] = p.score;
-    if (p.on && p.mode !== 'fh') p.mode = 'live';
+    base[p.id] = p.score;
+    if (p.on && p.mode !== 'fh') {
+      p.mode = 'live';
+      liveIds.push(p.id);
+    }
   }
+  const order = cfg.randomOrder ? shuffleArray(liveIds) : [];
+  S.live = {
+    on: true,
+    started: Date.now(),
+    base,
+    settings: cfg,
+    order,
+    turnIdx: 0
+  };
+  net.liveNotifiedAt = S.live.started;
+  ui.devicePickedAt = 0;
   fillMissing();
   hostPublish();
   sfx('start');
-  if (Object.values(S.players).filter(p => p.on).length < 2) {
-    toast('Zaproś ekipę kodem — hasła innych pojawią się tutaj na żywo!', 'info', 3400);
+  toast(
+    cfg.randomOrder
+      ? '🎲 Sesja Ekipa Live — kolejność wylosowana! Wybierz Tel lub PC.'
+      : '🎮 Sesja Ekipa Live — bez kolejki! Wybierz Tel lub PC.',
+    'ok',
+    3600
+  );
+  if (liveIds.length < 2) {
+    toast('Zaproś ekipę kodem — hasła innych pojawią się tutaj na żywo!', 'info', 3200);
   }
 }
 
@@ -2194,12 +2474,12 @@ function hostEndLive() {
   for (const p of Object.values(S.players)) {
     if (p.mode === 'live') { freeWord(p); p.mode = 'lobby'; }
   }
-  S.live = { on: false, started: 0, base: {} };
+  S.live = { on: false, started: 0, base: {}, settings: { randomOrder: false, confirmTurn: false }, order: [], turnIdx: 0 };
   hostPublish();
 }
 
 /* ============================================================================
-   NOTATNIK PODPOWIEDZI (PC + SZUFLADA TELEFON)
+   NOTATNIK PODPOWIEDZI
    ============================================================================ */
 function noteKey() { return `cz10_note_${net.code || 'local'}`; }
 function loadNotepad() {
@@ -2229,10 +2509,10 @@ function isPcLayoutActive() {
 window.addEventListener('resize', () => { if (net.joined) renderLive(); });
 
 /* ============================================================================
-   TRYB KLASYCZNY: NA CZOLE
+   TRYB KLASYCZNY: NA CZOLE (TYLKO BEZ LIMITU CZASU ∞)
    ============================================================================ */
-const fh = { on: false, stage: 'setup', dur: 60, left: 0, timer: null, word: null, seen: new Set(), results: [], lock: false };
-function fhOpen() { fh.on = true; fh.stage = 'setup'; fh.results = []; renderFh(); }
+const fh = { on: false, stage: 'setup', dur: 0, word: null, seen: new Set(), results: [], lock: false };
+function fhOpen() { fh.on = true; fh.stage = 'setup'; fh.dur = 0; fh.results = []; renderFh(); }
 function fhPick() {
   const assigned = new Set(Object.values(S.players).map(x => x.wid).filter(Boolean));
   const cand = S.words.filter(w => !fh.seen.has(w.id) && !assigned.has(w.id) && !(S.rules.noOwn && w.by === pid));
@@ -2246,7 +2526,7 @@ function fhPick() {
 }
 async function fhGo() {
   if (!S.words.length) { toast('Worek jest pusty — dorzućcie hasła!', 'warn'); return; }
-  fh.seen = new Set(); fh.results = []; fh.lock = false;
+  fh.seen = new Set(); fh.results = []; fh.lock = false; fh.dur = 0;
   act('enter', { mode: 'fh' });
   if (S.players[pid]) S.players[pid].mode = 'fh';
   keepAwake(true);
@@ -2256,19 +2536,9 @@ async function fhGo() {
     fh.n = i; renderFh(); sfx('tick'); await sleep(1000);
   }
   if (!fh.on || fh.stage !== 'count') return;
-  sfx('go'); fh.stage = 'play'; fh.word = fhPick(); fh.left = fh.dur;
+  sfx('go'); fh.stage = 'play'; fh.word = fhPick();
   if (!fh.word) { fhFinish('Brak wolnych haseł dla Ciebie — dorzućcie nowe!'); return; }
   renderFh();
-  clearInterval(fh.timer);
-  if (fh.dur) {
-    fh.timer = setInterval(() => {
-      fh.left--;
-      const t = $('#fh-timer');
-      if (t) { t.textContent = fh.left + 's'; t.classList.toggle('low', fh.left <= 10); }
-      if (fh.left <= 5 && fh.left > 0) sfx('tick');
-      if (fh.left <= 0) fhFinish();
-    }, 1000);
-  }
 }
 function fhRes(r) {
   if (fh.stage !== 'play' || !fh.word || fh.lock) return;
@@ -2287,12 +2557,11 @@ function fhRes(r) {
 }
 function fhScore() { return fh.results.reduce((s, x) => s + (x.r === 'ok' ? 1 : (S && S.rules.passMinus ? -1 : 0)), 0); }
 function fhFinish(msg) {
-  clearInterval(fh.timer); fh.stage = 'done'; fh.msg = msg || ''; sfx('end');
+  fh.stage = 'done'; fh.msg = msg || ''; sfx('end');
   act('exit'); if (S && S.players[pid]) S.players[pid].mode = 'lobby';
   keepAwake(false); renderFh();
 }
 function fhStop(silent) {
-  clearInterval(fh.timer);
   const was = fh.on && (fh.stage === 'play' || fh.stage === 'count');
   fh.on = false; fh.stage = 'setup';
   if (was && !silent && S) { act('exit'); if (S.players[pid]) S.players[pid].mode = 'lobby'; }
@@ -2305,14 +2574,14 @@ function renderFh() {
   const top = (mid, right = '') => `<div class="ov-top"><button class="btn btn-no btn-sm" data-act="fhExit"><i class="fa-solid fa-arrow-left"></i> Wyjdź z gry</button><div class="ov-title">${mid}</div>${right}</div>`;
   if (fh.stage === 'setup') {
     el.innerHTML = top('Na czole') + `<div class="fh-center"><div class="big-ico">📱</div><h2>Telefon na czoło!</h2>
-      <p>Odwróć ekran w stronę ekipy. Znajomi podpowiadają, a Ty zgadujesz. Wybierz limit czasu rundy:</p>
-      <div class="row wrap" style="justify-content:center">${[60, 90, 120, 0].map(d => `<button class="btn ${fh.dur === d ? 'btn-pri' : 'btn-ghost'}" data-act="fhDur" data-d="${d}">${d ? d + ' s' : '∞ bez limitu'}</button>`).join('')}</div>
+      <p><b>Bez limitu czasu — grajcie ile chcecie!</b><br>Odwróć ekran w stronę ekipy. Znajomi podpowiadają, a Ty zgadujesz i klikacie SIADŁO albo PAS.</p>
+      <span class="chip cyan" style="font-size:13px;padding:6px 14px">∞ Bez limitu czasu</span>
       <button class="btn btn-go btn-xl" data-act="fhGo" style="min-width:220px">START ▶</button></div>`;
   } else if (fh.stage === 'count') {
     el.innerHTML = top('Przyłóż do czoła!') + `<div class="fh-center"><p class="kicker" style="color:var(--amber)">NIE PODGLĄDAJ EKRANU!</p><div class="count-num">${fh.n}</div></div>`;
   } else if (fh.stage === 'play') {
     const w = fh.word;
-    el.innerHTML = top(`<span id="fh-timer" class="timer">${fh.dur ? fh.left + 's' : '∞'}</span>`, `<span id="fh-score" class="score-pill">${fhScore()} pkt</span>`) +
+    el.innerHTML = top(`<span class="chip cyan" style="font-size:13px;padding:4px 10px">∞ Bez limitu</span>`, `<span id="fh-score" class="score-pill">${fhScore()} pkt</span>`) +
       `<div id="fh-card" class="fh-card"><span class="chip">${esc(w.c)}</span><div class="fh-word">${esc(w.t)}</div><div class="muted" style="font-size:13px;font-weight:700">✍️ wymyślił(a): ${esc(w.byN)}</div></div>
       <div class="fh-btns"><button class="btn btn-no" data-act="fhRes" data-r="pass">👎 PAS</button><button class="btn btn-go" data-act="fhRes" data-r="ok">🔥 SIADŁO!</button></div>`;
   } else {
@@ -2346,6 +2615,21 @@ function players() {
 
 function render() {
   if (!net.joined || !S) return;
+  if (!net.amHost && ui.tab === 'admin') ui.tab = 'lobby';
+  $('#tab-admin').classList.toggle('hidden', !net.amHost);
+  $('#main-tabs').classList.toggle('is-host', net.amHost);
+
+  if (S.live && S.live.on && S.live.started && S.live.started > net.liveNotifiedAt) {
+    net.liveNotifiedAt = S.live.started;
+    toast(
+      S.live.settings && S.live.settings.randomOrder
+        ? '🎲 Ekipa Live wystartowała (kolejność wylosowana)! Wybierz Tel lub PC.'
+        : '🎮 Ekipa Live wystartowała! Wybierz Tel lub PC.',
+      'ok',
+      3500
+    );
+  }
+
   renderHeader();
   for (const t of ['lobby', 'words', 'rank', 'admin']) {
     $('#view-' + t).classList.toggle('hidden', ui.tab !== t);
@@ -2355,7 +2639,7 @@ function render() {
   if (ui.tab === 'lobby') renderLobby();
   if (ui.tab === 'words') renderWords();
   if (ui.tab === 'rank') renderRank();
-  if (ui.tab === 'admin') renderAdmin();
+  if (ui.tab === 'admin' && net.amHost) renderAdmin();
   renderLive();
   renderSummary();
   announceHistory();
@@ -2382,17 +2666,30 @@ function renderLobby() {
   $('#live-banner').classList.toggle('hidden', !(S.live.on && me && me.mode !== 'live'));
 
   const host = S.players[S.hostId];
+  const liveOrderOn = S.live.on ? !!(S.live.settings && S.live.settings.randomOrder) : !!S.rules.liveRandomOrder;
+  const liveConfirmOn = S.live.on ? !!(S.live.settings && S.live.settings.confirmTurn) : !!S.rules.liveConfirmTurn;
+  const livePeerOn = !!S.rules.peerJudge;
+  const canEditLiveCfg = net.amHost && !S.live.on;
+
+  const swOrder = $('#sw-liveOrder');
+  const swConfirm = $('#sw-liveConfirm');
+  const swPeer = $('#sw-livePeer');
+  swOrder.classList.toggle('on', liveOrderOn);
+  swOrder.disabled = !canEditLiveCfg;
+  swConfirm.classList.toggle('on', liveConfirmOn);
+  swConfirm.disabled = !canEditLiveCfg;
+  swPeer.classList.toggle('on', livePeerOn);
+  swPeer.disabled = !net.amHost;
+
+  $('#live-cfg-who').textContent = S.live.on
+    ? 'Aktywne w tej rundzie'
+    : (net.amHost ? 'Ty ustawiasz 👑' : `Ustala Host: ${host ? host.nick : '?'}`);
+
   let cta = '';
   if (S.live.on) {
-    cta = `<div class="grid2">
-      <button class="btn btn-go btn-block" data-act="joinLive" data-layout="phone"><i class="fa-solid fa-mobile-screen"></i> ${me?.mode === 'live' ? 'Wróć (Tel)' : 'Dołącz (Tel)'}</button>
-      <button class="btn btn-cyan btn-block" data-act="joinLive" data-layout="pc"><i class="fa-solid fa-desktop"></i> ${me?.mode === 'live' ? 'Wróć (PC)' : 'Dołącz (PC)'}</button>
-    </div>`;
+    cta = `<button class="btn btn-go btn-xl btn-block" data-act="joinLive"><i class="fa-solid fa-play"></i> ${me && me.mode === 'live' ? 'Wróć do Ekipa Live' : 'Dołącz do Ekipa Live'}</button>`;
   } else if (net.amHost) {
-    cta = `<div class="grid2">
-      <button class="btn btn-amber btn-block" data-act="startLive" data-layout="phone"><i class="fa-solid fa-mobile-screen"></i> START • Tel</button>
-      <button class="btn btn-cyan btn-block" data-act="startLive" data-layout="pc"><i class="fa-solid fa-desktop"></i> START • PC</button>
-    </div>`;
+    cta = `<button class="btn btn-amber btn-xl btn-block" data-act="startLive"><i class="fa-solid fa-play"></i> START EKIPA LIVE</button>`;
   } else {
     cta = `<button class="btn btn-dark btn-block" disabled>⏳ Czekamy, aż Host (${esc(host ? host.nick : '?')}) wystartuje Ekipa Live</button>`;
   }
@@ -2438,7 +2735,7 @@ function renderWords() {
       <span class="wb">${mine ? 'Ty' : esc(w.byN)}</span>
       ${mine || net.amHost ? `<button class="x" data-act="delW" data-id="${esc(w.id)}" title="Usuń"><i class="fa-solid fa-xmark"></i></button>` : ''}
     </div>`;
-  }).join('') : '<div class="empty">Worek pusty 🫙<br>Wpiszcie własne hasła albo dorzućcie +25 losowych gotowców!</div>';
+  }).join('') : '<div class="empty">Worek pusty 🫙<br>Wpiszcie własne hasła albo dorzućcie +25 gotowych haseł!</div>';
 }
 
 function renderRank() {
@@ -2467,6 +2764,7 @@ function renderRank() {
 }
 
 function renderAdmin() {
+  if (!net.amHost) return;
   const host = S.players[S.hostId];
   const sw = (id, on) => { const b = $(id); b.classList.toggle('on', !!on); b.disabled = !net.amHost; };
   sw('#sw-noOwn', S.rules.noOwn);
@@ -2487,14 +2785,13 @@ function renderAdmin() {
           <div class="dim" style="font-size:12px">Wynik: <b style="color:var(--amber)">${p.score} pkt</b> (🔥 ${p.ok} / 👎 ${p.pass})</div>
         </div>
       </div>
-      ${net.amHost ? `
       <div class="row" style="gap:6px;margin-left:auto">
         <button class="btn btn-no btn-xs" data-act="pAdj" data-id="${esc(p.id)}" data-d="-1">-1</button>
         <button class="btn btn-go btn-xs" data-act="pAdj" data-id="${esc(p.id)}" data-d="1">+1</button>
         <button class="btn btn-ghost btn-xs" data-act="pZero" data-id="${esc(p.id)}" title="Wyzeruj punkty">0</button>
         ${p.id !== pid ? `<button class="btn btn-amber btn-xs" data-act="pHost" data-id="${esc(p.id)}" title="Przekaż Hosta">👑</button>` : ''}
         ${p.id !== pid ? `<button class="btn btn-dark btn-xs" data-act="pKick" data-id="${esc(p.id)}" title="Wyrzuć z pokoju" style="color:var(--red)">✕</button>` : ''}
-      </div>` : ''}
+      </div>
     </div>`).join('');
 }
 
@@ -2502,10 +2799,28 @@ function renderLive() {
   const me = S.players[pid];
   const show = !!(S.live.on && me && me.mode === 'live') && !fh.on;
   const el = $('#scr-live');
+  const devPicker = $('#device-picker');
   const wasHidden = el.classList.contains('hidden');
   el.classList.toggle('hidden', !show);
-  if (!show) { if (!wasHidden) keepAwake(false); return; }
+  if (!show) {
+    devPicker.classList.add('hidden');
+    if (!wasHidden) keepAwake(false);
+    return;
+  }
   if (wasHidden) keepAwake(true);
+
+  const needDevicePick = ui.devicePickedAt !== S.live.started;
+  devPicker.classList.toggle('hidden', !needDevicePick);
+  if (needDevicePick) {
+    const infoEl = $('#dev-picker-order-info');
+    if (S.live.settings && S.live.settings.randomOrder) {
+      infoEl.classList.remove('hidden');
+      infoEl.innerHTML = `<span class="chip amber">🎲 Kolejność tur została wylosowana${S.live.settings.confirmTurn ? ' • z potwierdzaniem tury' : ''}</span>`;
+    } else {
+      infoEl.classList.add('hidden');
+      infoEl.innerHTML = '';
+    }
+  }
 
   const pcActive = isPcLayoutActive();
   const shell = $('#live-shell');
@@ -2524,7 +2839,56 @@ function renderLive() {
   $('#live-end').classList.toggle('hidden', !net.amHost);
   $('#live-deal').classList.toggle('hidden', !net.amHost);
 
-  // KARTY POZOSTAŁYCH GRACZY (NIGDY NIE POKAZUJE TWOJEGO HASŁA)
+  const turnBar = $('#turn-bar');
+  const orderOn = !!(S.live.settings && S.live.settings.randomOrder);
+  const confirmOn = !!(S.live.settings && S.live.settings.confirmTurn);
+  const orderIds = (S.live.order || []).filter(id => S.players[id] && S.players[id].mode === 'live');
+  const safeTurnIdx = orderIds.length ? (S.live.turnIdx % orderIds.length + orderIds.length) % orderIds.length : 0;
+  const activeTurnId = orderOn && orderIds.length ? orderIds[safeTurnIdx] : null;
+  const activeTurnPlayer = activeTurnId ? S.players[activeTurnId] : null;
+  const isMyTurn = activeTurnId === pid;
+
+  if (orderOn && orderIds.length) {
+    turnBar.classList.remove('hidden');
+    let statusHtml = '';
+    if (isMyTurn) {
+      statusHtml = `<span class="turn-status mine">🎤 Twoja tura! ${confirmOn ? 'Gdy skończysz, oddaj turę.' : 'Twoja kolej w kolejce.'}</span>`;
+    } else if (confirmOn) {
+      statusHtml = `<span class="turn-status wait">⏳ Czekamy, aż ${esc(activeTurnPlayer ? activeTurnPlayer.nick : '?')} odda turę…</span>`;
+    } else {
+      statusHtml = `<span class="turn-status wait">🗣️ Teraz mówi: ${esc(activeTurnPlayer ? activeTurnPlayer.nick : '?')}</span>`;
+    }
+
+    const hostTurnBtns = net.amHost
+      ? `<button class="btn btn-ghost btn-xs" data-act="skipTurn" title="Pomiń / przejdź do następnego gracza">⏭ Pomiń</button>
+         <button class="btn btn-dark btn-xs" data-act="reshuffleOrder" title="Przetasuj kolejkę">🎲</button>`
+      : '';
+
+    const myTurnBtn = isMyTurn
+      ? `<button class="btn ${confirmOn ? 'btn-go' : 'btn-amber'} btn-sm btn-turn-done" data-act="nextTurn"><i class="fa-solid fa-check"></i> Skończyłem → Następny</button>`
+      : '';
+
+    const pills = orderIds.map((id, idx) => {
+      const pl = S.players[id];
+      const actCls = id === activeTurnId ? 'active' : '';
+      const offCls = pl && pl.on ? '' : 'off';
+      return `<span class="q-pill ${actCls} ${offCls}"><span class="qn">${idx + 1}</span><span>${esc(pl ? pl.av : '😎')}</span><span>${esc(pl ? pl.nick : '?')}${id === pid ? ' (Ty)' : ''}</span></span>`;
+    }).join('');
+
+    turnBar.innerHTML = `
+      <div class="turn-top">
+        ${statusHtml}
+        <div class="turn-cta">
+          ${myTurnBtn}
+          ${hostTurnBtns}
+        </div>
+      </div>
+      <div class="turn-queue">${pills}</div>`;
+  } else {
+    turnBar.classList.add('hidden');
+    turnBar.innerHTML = '';
+  }
+
   const others = inGame.filter(p => p.id !== pid);
   const canJudgeOthers = net.amHost || !!S.rules.peerJudge;
 
@@ -2532,13 +2896,16 @@ function renderLive() {
     const w = wordById(p.wid);
     const fresh = net.prevWid[p.id] !== undefined && net.prevWid[p.id] !== p.wid && p.wid;
     const pend = net.pend[p.id] && net.pend[p.id].wid === p.wid;
-    return `<div class="lcard ${p.on ? '' : 'off'} ${fresh ? 'fresh' : ''}">
+    const qPos = orderOn ? orderIds.indexOf(p.id) : -1;
+    const onTurn = p.id === activeTurnId;
+    return `<div class="lcard ${p.on ? '' : 'off'} ${onTurn ? 'on-turn' : ''} ${fresh ? 'fresh' : ''}">
       <div class="lc-head">
         ${avHTML(p)}
         <div class="grow" style="min-width:0">
           <div class="nick">${esc(p.nick)}${p.id === S.hostId ? ' 👑' : ''}</div>
-          <small>${p.score} pkt${p.on ? '' : ' • offline'}</small>
+          <small>${p.score} pkt${onTurn ? ' • 🎤 Tura' : ''}${p.on ? '' : ' • offline'}</small>
         </div>
+        ${qPos >= 0 ? `<span class="q-badge" title="Numer w kolejce">#${qPos + 1}</span>` : ''}
       </div>
       <div class="lc-word ${w ? '' : 'wait'}">${w ? esc(w.t) : '⏳ Czeka na hasło… dorzućcie hasła ➕'}</div>
       ${w ? `<div class="lc-meta">
@@ -2557,7 +2924,6 @@ function renderLive() {
 
   for (const p of Object.values(S.players)) net.prevWid[p.id] = p.wid;
 
-  // DOLNY PASEK TWOJEGO UKRYTEGO HASŁA
   $('#live-me-av').outerHTML = avHTML(me, 'sm').replace('class="av sm"', 'id="live-me-av" class="av sm"');
   $('#live-me-score').textContent = me.score + ' pkt';
   const pendMe = (net.pend[pid] && net.pend[pid].wid === me.wid) || Date.now() < net.myCooldownUntil;
@@ -2587,7 +2953,6 @@ function renderLive() {
 
   $('#me-ok').disabled = $('#me-pass').disabled = !me.wid || pendMe;
 
-  // HISTORIA MOICH HASEŁ W NOTATNIKU
   $('#note-hist').innerHTML = net.mySessionHist.length
     ? net.mySessionHist.map(h => `
       <div class="note-hist-item">
@@ -2630,7 +2995,7 @@ function renderSummary() {
 }
 
 function confetti() {
-  const cs = ['#ff4fa3', '#ffc23d', '#2ee59d', '#8b5cf6', '#22d3ee'];
+  const cs = ['#ff4fa3', '#ffc23d', '#2ee59d', '#8b5cf6', '#38bdf8'];
   for (let i = 0; i < 65; i++) {
     const d = document.createElement('div');
     d.className = 'confetti';
@@ -2657,7 +3022,8 @@ function announceHistory() {
         : `👎 Pas: „${h.w}” (od: ${h.a})`;
       net.mySessionHist.unshift({ w: h.w, r: h.r });
       if (net.mySessionHist.length > 20) net.mySessionHist.length = 20;
-      if ($('#note-autoclear')?.checked) clearNotepad(true);
+      const ac = $('#note-autoclear');
+      if (ac && ac.checked) clearNotepad(true);
 
       if (h.r === 'ok') {
         toast(`🔥 SIADŁO! Twoje hasło to: „${h.w}”`, 'big', 3600);
@@ -2724,7 +3090,7 @@ async function processAvatar(file) {
       i.onerror = () => rej('Nie udało się wczytać obrazka.');
       i.src = url;
     });
-    const s = 144, c = document.createElement('canvas');
+    const s = 160, c = document.createElement('canvas');
     c.width = c.height = s;
     const m = Math.min(img.width, img.height);
     c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, s, s);
@@ -2838,14 +3204,22 @@ const A = {
       else (d.exitFullscreen || d.webkitExitFullscreen).call(d);
     } catch { toast('Ta przeglądarka nie obsługuje pełnego ekranu.', 'warn'); }
   },
-  startLive(b) { hostStartLive(b.dataset.layout || 'auto'); },
-  joinLive(b) {
+  startLive() { hostStartLive(); },
+  joinLive() {
     if (!S.live.on) return;
-    if (b.dataset.layout) ui.layoutPref = b.dataset.layout;
     act('enter', { mode: 'live' });
     const me = S.players[pid];
     if (me) me.mode = 'live';
     render();
+  },
+  pickDevice(b) {
+    const dev = b.dataset.dev === 'pc' ? 'pc' : 'phone';
+    ui.layoutPref = dev;
+    ui.devicePickedAt = (S && S.live && S.live.started) ? S.live.started : Date.now();
+    ui.drawerOpen = false;
+    sfx('tick');
+    renderLive();
+    toast(dev === 'pc' ? '💻 Wybrano układ Komputer (z Notatnikiem).' : '📱 Wybrano układ Telefon.', 'info', 2000);
   },
   exitLive() {
     ui.drawerOpen = false;
@@ -2855,8 +3229,46 @@ const A = {
     render();
     toast('Wyszedłeś z Ekipa Live — możesz wrócić w dowolnej chwili.', 'info');
   },
+  liveSetting(b) {
+    if (!hostOnly()) return;
+    const k = b.dataset.k;
+    if (k === 'peerJudge') {
+      S.rules.peerJudge = !S.rules.peerJudge;
+      hostPublish();
+      return;
+    }
+    if (S.live.on) { toast('Ustawienia kolejki zmienisz przed startem następnej sesji.', 'warn'); return; }
+    if (k === 'liveRandomOrder') {
+      S.rules.liveRandomOrder = !S.rules.liveRandomOrder;
+      if (!S.rules.liveRandomOrder) S.rules.liveConfirmTurn = false;
+    } else if (k === 'liveConfirmTurn') {
+      S.rules.liveConfirmTurn = !S.rules.liveConfirmTurn;
+      if (S.rules.liveConfirmTurn) S.rules.liveRandomOrder = true;
+    }
+    hostPublish();
+  },
+  nextTurn() {
+    if (!S || !S.live || !S.live.on || !S.live.settings || !S.live.settings.randomOrder) return;
+    sfx('tick');
+    act('nextTurn');
+  },
+  skipTurn() {
+    if (!hostOnly() || !S || !S.live || !S.live.on || !S.live.settings || !S.live.settings.randomOrder) return;
+    sfx('tick');
+    act('nextTurn');
+    toast('⏭ Przesunięto turę na kolejnego gracza.', 'info', 1800);
+  },
+  reshuffleOrder() {
+    if (!hostOnly() || !S || !S.live || !S.live.on || !S.live.settings || !S.live.settings.randomOrder) return;
+    const liveIds = Object.values(S.players).filter(p => p.mode === 'live').map(p => p.id);
+    S.live.order = shuffleArray(liveIds);
+    S.live.turnIdx = 0;
+    hostPublish();
+    toast('🎲 Wylosowano nową kolejność tur!', 'ok');
+  },
   toggleLayout() {
     ui.layoutPref = isPcLayoutActive() ? 'phone' : 'pc';
+    ui.devicePickedAt = (S && S.live && S.live.started) ? S.live.started : Date.now();
     if (ui.layoutPref === 'pc' && window.innerWidth < 960) {
       ui.drawerOpen = true;
       toast('Na węższym ekranie Notatnik otwiera się jako wysuwana szuflada.', 'info');
@@ -2916,7 +3328,6 @@ const A = {
   },
   closeSum() { net.summarySeen = S.summary ? S.summary.ts : 0; $('#scr-sum').classList.add('hidden'); render(); },
   fhOpen() { fhOpen(); },
-  fhDur(b) { fh.dur = +b.dataset.d; renderFh(); },
   fhGo() { fhGo(); },
   fhAgain() { fhGo(); },
   fhRes(b) { fhRes(b.dataset.r); },
@@ -3040,6 +3451,7 @@ const A = {
     const p = S.players[b.dataset.id];
     if (!p || !await confirmBox('Wyrzucić gracza?', `${p.nick} wyleci z pokoju i nie będzie mógł wrócić do tej sesji.`, 'Wyrzuć', true)) return;
     freeWord(p);
+    removeFromTurnOrder(p.id);
     delete S.players[p.id];
     delete net.playerTokens[p.id];
     S.kicked = (S.kicked || []).concat(p.id).slice(-40);
@@ -3060,7 +3472,7 @@ document.addEventListener('click', e => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && net.joined) {
     if (!net.amHost) act('hb');
-    if ((fh.on && fh.stage === 'play') || (S?.players[pid]?.mode === 'live')) {
+    if ((fh.on && fh.stage === 'play') || (S && S.players[pid] && S.players[pid].mode === 'live')) {
       wakeLock = null;
       keepAwake(true);
     }
@@ -3082,7 +3494,6 @@ window.addEventListener('pagehide', () => {
   } catch {}
   renderStart();
 
-  // Automatyczny powrót do ostatniej aktywnej sesji (np. po odświeżeniu strony na telefonie)
   const ses = store.get('cz10_session', null);
   if (ses && ses.pid === pid && profile.nick && Date.now() - ses.at < 15 * 60e3) {
     $('#nick').value = profile.nick;
